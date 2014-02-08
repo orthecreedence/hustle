@@ -170,6 +170,9 @@ You cannot use queue tubes that haven't been declared.
 to "hustle".
 - `tubes` specifies what tubes we want to be present on [open](#hustleopen).
 
+Once instantiated, the hustle object has two namespaces: [Queue](#hustlequeue)
+and [Pubsub](#hustlepubsub).
+
 ### Hustle.open
 ```javascript
 hustle.open({
