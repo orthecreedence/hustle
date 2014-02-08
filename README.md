@@ -135,9 +135,9 @@ It's important to note: time-to-run (`ttr`) and job delaying are not yet
 implemented.
 
 - [Hustle class](#hustle-class)
-- [Hustle.open](#hustle-open)
-- [Hustle.close](#hustle-close)
-- [Hustle.is\_open](#hustle-is-open);
+- [Hustle.open](#hustleopen)
+- [Hustle.close](#hustleclose)
+- [Hustle.is\_open](#hustleis-open);
 - [Hustle.wipe](#hustlequeuewipe)
 - [Hustle.Queue](#hustlequeue)
   - [Queue item format](#queue-item-format)
@@ -167,7 +167,7 @@ You cannot use queue tubes that haven't been declared.
 
 - `db_name` specifies the name we want to open the Hustle queue onto. Defaults
 to "hustle".
-- `tubes` specifies what tubes we want to be present on [open](#hustle-open).
+- `tubes` specifies what tubes we want to be present on [open](#hustleopen).
 
 ### Hustle.open
 ```javascript
@@ -205,7 +205,7 @@ hustle.wipe();
 
 Closes the Hustle database and obliterates it. Very useful for debugging apps
 *or* if you have no interest in actually persisting, you can call `wipe()` each
-time your app loads just before you call [open](#hustle-open).
+time your app loads just before you call [open](#hustleopen).
 
 ### Hustle Queue
 The Hustle queue system allows jobs to be atomically grabbed and operated on
