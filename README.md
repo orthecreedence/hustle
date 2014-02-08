@@ -93,8 +93,8 @@ hustle.Queue.delete(item.id, {
 
 Once you are satisfied that a job has fulfilled its purpose, it makes sense to
 [delete](#hustlequeuedelete) it so it doesn't sit there gumming up your reserved
-items. Note that we don't have to specify a tube for `del`...the command works
-across all tubes, as all job IDs are unique across tubes.
+items. Note that we don't have to specify a tube for `delete`...the command
+works across all tubes, as all job IDs are unique across tubes.
 
 ```javascript
 var consumer = new hustle.Queue.Consumer(function(job) {
@@ -282,8 +282,8 @@ anything higher getting less important. Defaults to `1024`.
 - `success` is fired when the job has been added to the queue. The first
 argument is the full item that was passed back (which is in the [standard format](#queue-item-format)).
 You may want to make note of the item's ID (`item.id`) because this will allow
-you to reference the job later on if needed (via [peek](#hustlequeuepeek), [delete](#hustlequeuedelete),
-[bury](#hustlequeuebury), etc).
+you to reference the job later on if needed (via [peek](#hustlequeuepeek),
+[delete](#hustlequeuedelete), [bury](#hustlequeuebury), etc).
 - `error` is fired when there was a problem adding the item to the queue.
 
 #### Hustle.Queue.reserve
