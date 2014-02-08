@@ -213,8 +213,7 @@ time your app loads just before you call [open](#hustleopen).
 
 ### Hustle.Queue
 The Hustle queue system allows jobs to be atomically grabbed and operated on
-by any number of workers. Each job can only be reserved by one worker at a time,
-make the queue great for running backgroun tasks.
+by any number of workers. Each job can only be reserved by one worker at a time.
 
 Hustle.Queue takes heavy inspiration from [beanstalkd](http://kr.github.io/beanstalkd/),
 in fact most functions have the same names as the [beanstalkd protocol](https://github.com/kr/beanstalkd/blob/master/doc/protocol.txt).
