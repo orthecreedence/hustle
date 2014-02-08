@@ -1,4 +1,4 @@
-Hustle: A javascript queuing library persisted over IndexedDB
+Hustle: A javascript queuing/messaging library persisted over IndexedDB
 =============================================================
 Hustle is a javascript queuing and messaging library built on top of IndexedDB.
 
