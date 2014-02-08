@@ -157,7 +157,7 @@ implemented.
 
 ### Hustle class
 ```javascript
-var queue   =   new Hustle({
+var hustle   =   new Hustle({
     db_name: 'hustle',
     tubes: ['tube1', 'tube2', ...]
 });
