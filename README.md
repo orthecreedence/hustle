@@ -92,9 +92,38 @@ delete it so it doesn't sit there gumming up your reserved items. Note that we
 don't have to specify a tube for `del`...the command works across all tubes, as
 all job IDs are unique across tubes.
 
+```javascript
+var consumer = new hustle.Queue.Consumer(function(job) {
+    console.log('got job! ', job);
+    hustle.Queue.delete(job.id);
+}, { tube: 'jobs' });
+```
+A consumer listens to a particular tube and calls the given function for each
+job it gets.
+
 ### Pubsub
 
-...
+```javascript
+var subscriber = new hustle.Pubsub.Subscriber('mychannel', function(msg) {
+    console.log('got a message! ', msg);
+});
+```
+
+A pubsub subscriber listens to the given channel for messages, calling the given
+function for each one. Any number of subscribers can listen to a channel and get
+all messages that flow through it, unlike a queue where only one consumer can
+access a job at a time.
+
+```javascript
+hustle.Pubsub.publish('mychannel', 'my roof is leaking. no, seriously it is', {
+    success: function(msg) {
+        console.log('send message ', msg.id);
+    }
+});
+```
+
+Send a message to a channel. All subscribers of that channel will get the
+message.
 
 API
 ---
@@ -105,44 +134,26 @@ way, this will describe how to effectively use Hustle.
 It's important to note: time-to-run (`ttr`) and job delaying are not yet
 implemented.
 
-- [Queue item format](#queue-item-format)
 - [Hustle class](#hustle-class)
 - [Hustle.open](#hustle-open)
 - [Hustle.close](#hustle-close)
 - [Hustle.is\_open](#hustle-is-open);
 - [Hustle.wipe](#hustlequeuewipe)
-- [Hustle.Queue.peek](#hustlequeuepeek)
-- [Hustle.Queue.put](#hustlequeueput)
-- [Hustle.Queue.reserve](#hustlequeuereserve)
-- [Hustle.Queue.delete](#hustlequeuedelete)
-- [Hustle.Queue.release](#hustlequeuerelease)
-- [Hustle.Queue.bury](#hustlequeuebury)
-- [Hustle.Queue.kick](#hustlequeuekick)
-- [Hustle.Queue.kick\_job](#hustlequeuekick-job)
-- [Hustle.Queue.count\_ready](#hustlequeuecount-ready)
-- [Hustle.Queue.Consumer](#hustlequeueconsumee)
-- [Hustle.Pubsub.publish](#hustlepubsubpublish)
-- [Hustle.Pubsub.Subscriber](#hustlepubsubsubscriber)
-
-### Queue item format
-All items added to the Hustle queue follow this basic format:
-```javascript
-{
-    id: 6969,               // the item's Hustle-assigned unique id
-    priority: 1024,         // the item's priority (lower is more important, defaults to 1024)
-    data: { ... },          // the item's user-specified data payload
-    age: 0,                 // how old the item is (unimplemented)
-    reserves: 0,            // how many times this item has been reserved
-    releases: 0,            // how many times this item has been released
-    timeouts: 0,            // how many times this item has timed out (unimplemented)
-    buries: 0,              // how many times this item has been buried
-    kicks: 0,               // how many times this item has been kicked
-    created: 1391835692616  // when this item was created (new Date().getTime())
-}
-```
-
-Note that `timeouts` is unimplemented because `ttr` is not currently implemented
-in the Hustle lib.
+- [Hustle.Queue](#hustlequeue)
+  - [Queue item format](#queue-item-format)
+  - [Hustle.Queue.peek](#hustlequeuepeek)
+  - [Hustle.Queue.put](#hustlequeueput)
+  - [Hustle.Queue.reserve](#hustlequeuereserve)
+  - [Hustle.Queue.delete](#hustlequeuedelete)
+  - [Hustle.Queue.release](#hustlequeuerelease)
+  - [Hustle.Queue.bury](#hustlequeuebury)
+  - [Hustle.Queue.kick](#hustlequeuekick)
+  - [Hustle.Queue.kick\_job](#hustlequeuekick-job)
+  - [Hustle.Queue.count\_ready](#hustlequeuecount-ready)
+  - [Hustle.Queue.Consumer](#hustlequeueconsumee)
+- [Hustle.Pubsub](#hustlepubsub)
+  - [Hustle.Pubsub.publish](#hustlepubsubpublish)
+  - [Hustle.Pubsub.Subscriber](#hustlepubsubsubscriber)
 
 ### Hustle class
 ```javascript
@@ -151,7 +162,8 @@ var queue   =   new Hustle({
     tubes: ['tube1', 'tube2', ...]
 });
 ```
-Creates a Hustle object.
+Creates a Hustle object. Note that the tubes the queue uses *must* be specified.
+You cannot use queue tubes that haven't been declared.
 
 - `db_name` specifies the name we want to open the Hustle queue onto. Defaults
 to "hustle".
@@ -192,10 +204,35 @@ hustle.wipe();
 ```
 
 Closes the Hustle database and obliterates it. Very useful for debugging apps
-*or* if you have no interest in actually persisting your queue items, you can
-call `wipe()` each time your app loads just before you call [open](#hustle-open).
+*or* if you have no interest in actually persisting, you can call `wipe()` each
+time your app loads just before you call [open](#hustle-open).
 
-### Hustle.Queue.peek
+### Hustle Queue
+The Hustle queue system allows jobs to be atomically grabbed and operated on
+by any number of workers. Each job can only be reserved by one worker at a time,
+make the queue great for running backgroun tasks.
+
+#### Queue item format
+All items added to the Hustle queue follow this basic format:
+```javascript
+{
+    id: 6969,               // the item's Hustle-assigned unique id
+    priority: 1024,         // the item's priority (lower is more important, defaults to 1024)
+    data: { ... },          // the item's user-specified data payload
+    age: 0,                 // how old the item is (unimplemented)
+    reserves: 0,            // how many times this item has been reserved
+    releases: 0,            // how many times this item has been released
+    timeouts: 0,            // how many times this item has timed out (unimplemented)
+    buries: 0,              // how many times this item has been buried
+    kicks: 0,               // how many times this item has been kicked
+    created: 1391835692616  // when this item was created (new Date().getTime())
+}
+```
+
+Note that `timeouts` is unimplemented because `ttr` is not currently implemented
+in the Hustle lib.
+
+#### Hustle.Queue.peek
 ```javascript
 hustle.Queue.peek(item_id, {
     success: function(item) { ... },
@@ -214,7 +251,7 @@ item (or `null` if not found). The item will have `item.tube` and `item.state`
 set appropriately.
 - `error` is fired if there was a problem looking up that queue item.
 
-### Hustle.Queue.put
+#### Hustle.Queue.put
 ```javascript
 hustle.Queue.put(job_data, {
     tube: 'default',
@@ -236,7 +273,7 @@ you to reference the job later on if needed (via [peek](#hustlequeuepeek), [dele
 [bury](#hustlequeuebury), etc).
 - `error` is fired when there was a problem adding the item to the queue.
 
-### Hustle.Queue.reserve
+#### Hustle.Queue.reserve
 ```javascript
 hustle.Queue.reserve({
     tube: 'default',
@@ -255,7 +292,7 @@ the job we pulled off the queue (or `null` of the tube is empty). It is in the
 need it.
 - `error` is fired if there was a problem reserving the item.
 
-### Hustle.Queue.delete
+#### Hustle.Queue.delete
 ```javascript
 hustle.Queue.delete(item_id, {
     success: function(item) { ... },
@@ -277,7 +314,7 @@ really want to save a particular job for later inspection/logging, consider
 wasn't found.
 - `error` is fired when there was a problem deleting the item.
 
-### Hustle.Queue.release
+#### Hustle.Queue.release
 ```javascript
 hustle.Queue.release(item_id, {
     priority: 1024,
@@ -294,7 +331,7 @@ unspecified, will default to the item's original priority.
 - `success` is fired when the item is released back into the queue.
 - `error` is fired if something went wrong while releasing.
 
-### Hustle.Queue.bury
+#### Hustle.Queue.bury
 ```javascript
 hustle.Queue.bury(item_id, {
     priority: 1024,
@@ -319,7 +356,7 @@ If unspecified, will use the item's current priority value.
 - `success` is fired when the bury operation is finished.
 - `error` is fired if something goes wrong while burying.
 
-### Hustle.Queue.kick
+#### Hustle.Queue.kick
 ```javascript
 hustle.Queue.kick(num, {
     success: function(count) { ... },
@@ -335,7 +372,7 @@ into a ready state in their respective tubes.
 the actual number of jobs that were kicked.
 - `error` is fired if something goes wrong while kicking.
 
-### Hustle.Queue.kick\_job
+#### Hustle.Queue.kick\_job
 ```javascript
 hustle.Queue.kick_job(item_id, {
     success: function() { ... },
@@ -350,7 +387,7 @@ Kicks a specific item by id, as opposed to kicking the first N items (like
 - `success` is fired when the operation completes.
 - `error` is fired if something goes wrong while kicking.
 
-### Hustle.Queue.count\_ready
+#### Hustle.Queue.count\_ready
 ```javascript
 hustle.Queue.count_ready(tube, {
     success: function(count) { ... },
@@ -365,7 +402,7 @@ Count the number of *ready* items in a tube.
 count.
 - `error` is fired when something goes wrong.
 
-### Hustle.Queue.Consumer
+#### Hustle.Queue.Consumer
 ```javascript
 var consumer = new hustle.Queue.Consumer(consume_fn, {
     delay: 100,
@@ -373,9 +410,9 @@ var consumer = new hustle.Queue.Consumer(consume_fn, {
 });
 ```
 
-Consume provides an interface to watch a particular tube and call a function for
-each item that is [put](#hustlequeueput) into it. It currently works by polling every X
-milliseconds (100 by default).
+The Consumer class provides an interface to watch a particular tube and call a
+function for each item that is [put](#hustlequeueput) into it. It currently
+works by polling every X milliseconds (100 by default).
 
 - `consume_fn` is a function, of one argument, which will be called for each
 job entered into the tube. The value passed in is a [queue item](#queue-item-format).
@@ -386,13 +423,66 @@ a blocking interface, so polling is the only option, as far as I know.
 The returned object has two methods:
 
 - `consumer.start()` starts the consumer. Note that it starts on instantiation,
-so you don't need to call this unless you previously called `stop()`.
-- `consumer.stop()` stops the consumer from polling the queue.
+so you don't need to call this unless you previously called `consumer.stop()`.
+- `consumer.stop()` stops the consumer from polling the queue. Can be started
+again via `consumer.start()`.
 
-### Hustle.Pubsub.publish
+### Hustle.Pubsub
+The Hustle pubsub system allows any number of subscribers to recieve messages on
+arbitrary channels. Unlike the [queue](#hustlequeue), a message will be seen by
+*all* subscribers on a channel.
 
-### Hustle.Pubsub.Subscriber
+#### Message item format
+All items added to the Hustle queue follow this basic format:
+```javascript
+{
+    id: 6969,               // the item's Hustle-assigned unique id
+    data: { ... },          // the item's user-specified message payload
+    created: 1391835692616  // when this item was created (new Date().getTime())
+}
+```
 
+#### Hustle.Pubsub.publish
+```javascript
+hustle.Pubsub.publish(channel, message, {
+    success: function(msg) { ... },
+    error: function(e) { ... }
+});
+```
+
+Publishes a message to a channel. Unlike the [queue](#hustlequeue)'s tubes,
+channels are arbitrary and do *not* need to be declared.
+
+- `channel` is a string channel name.
+- `message` is any javascript value you want to pass as a message.
+- `success` is triggered when the message is added to the channel, the first
+argument being the message added in the [standard format](#message-item-format).
+- `error` is triggered is there's a problem adding the message.
+
+#### Hustle.Pubsub.Subscriber
+```javascript
+var subscriber = new hustle.Pubsub.Subscriber(channel, dispatch_fn, {
+    delay: 100,
+    error: function(e) { ... }
+});
+```
+
+The Subscriber class listens on the given channel and passes any messages
+recieved to the `dispatch_fn`.
+
+- `channel` is a string channel name.
+- `dispatch_fn` is a function with one argument that will be passed message
+from the channel. Each passed message will be in the [standard format](#message-item-format).
+- `delay` is how many ms between polls to the messages table (defaults to 100).
+- `error` is triggered if there are any problems while subscribed.
+
+The object returned has two methods:
+
+- `start` starts subscribing. Note that the Subscriber class starts on
+instantiation, so you'll only need to call `consumer.start()` after calling
+`consumer.stop()`.
+- `stop` stops the consumer from listening to the channel. Can be started again
+with `consumer.start()`
 
 Tests
 -----
