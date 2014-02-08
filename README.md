@@ -13,15 +13,18 @@ futures or promises or deferreds or whatever the hell they're called this week,
 you're stuck in callback hell.
 
 - [Getting started](#getting-started)
-- [API](#api)
+- [Queue API](#queue-api)
+- [Pubsub API](#pubsub-api)
 - [Tests](#tests)
 - [License](#license)
 
 Getting started
 ---------------
 ```javascript
-var queue   =   new Hustle({ tubes: ['jobs'] });
+var hustle   =   new Hustle({ tubes: ['jobs'] });
 ```
+
+### Queuing
 
 Here we create a new Hustle queue. Note that we specify `tubes`. Think of a tube
 as a *table* in a database: it logically separates the different kinds of
@@ -30,7 +33,7 @@ specify which tube you're operating on. If undefined, the `default` tube is used
 (which is always created on init).
 
 ```javascript
-queue.open({
+hustle.open({
     success: function() {
         console.log('queue opened!');
     },
@@ -41,7 +44,7 @@ queue.open({
 ```
 
 ```javascript
-queue.put({task: 'rob_bank'}, {
+hustle.Queue.put({task: 'rob_bank'}, {
     tube: 'jobs',       // if unspecified, will use tube "default"
     success: function(item) {
         console.log('added item: ', item.id);
@@ -58,7 +61,7 @@ is our message. This can be any arbitrary javascript object. Once complete, our
 can use to reference the message with later on).
 
 ```javascript
-queue.reserve({
+hustle.Queue.reserve({
     tube: 'jobs',       // if unspecified, will use tube "default"
     success: function(item) {
         console.log('heyyy man...you got a job!', item);
@@ -71,10 +74,10 @@ queue.reserve({
 
 Now we "reserve" an item. This removes the job from its "ready" state and puts
 it into a reserved state, meaning that nobody else can reserve that job unless
-it's [released](#release) back onto the tube.
+it's [released](#hustle-queue-release) back onto the tube.
 
 ```javascript
-queue.delete(item.id, {
+hustle.Queue.delete(item.id, {
     success: function() {
         console.log('job '+ item.id +' deleted.');
     },
@@ -89,7 +92,9 @@ delete it so it doesn't sit there gumming up your reserved items. Note that we
 don't have to specify a tube for `del`...the command works across all tubes, as
 all job IDs are unique across tubes.
 
-That should get you started!
+### Pubsub
+
+...
 
 API
 ---
@@ -101,20 +106,23 @@ It's important to note: time-to-run (`ttr`) and job delaying are not yet
 implemented.
 
 - [Queue item format](#queue-item-format)
-- [Hustle class](#hustle)
-- [Hustle.open](#open)
-- [Hustle.close](#close)
-- [Hustle.wipe](#wipe)
-- [Hustle.peek](#peek)
-- [Hustle.put](#put)
-- [Hustle.reserve](#reserve)
-- [Hustle.delete](#delete)
-- [Hustle.release](#release)
-- [Hustle.bury](#bury)
-- [Hustle.kick](#kick)
-- [Hustle.kick\_job](#kick-job)
-- [Hustle.count\_ready](#count-ready)
-- [Hustle.consume](#consume)
+- [Hustle class](#hustle-class)
+- [Hustle.open](#hustle-open)
+- [Hustle.close](#hustle-close)
+- [Hustle.is\_open](#hustle-is-open);
+- [Hustle.wipe](#hustle-queue-wipe)
+- [Hustle.Queue.peek](#hustle-queue-peek)
+- [Hustle.Queue.put](#hustle-queue-put)
+- [Hustle.Queue.reserve](#hustle-queue-reserve)
+- [Hustle.Queue.delete](#hustle-queue-delete)
+- [Hustle.Queue.release](#hustle-queue-release)
+- [Hustle.Queue.bury](#hustle-queue-bury)
+- [Hustle.Queue.kick](#hustle-queue-kick)
+- [Hustle.Queue.kick\_job](#hustle-queue-kick-job)
+- [Hustle.Queue.count\_ready](#hustle-queue-count-ready)
+- [Hustle.Queue.Consumer](#hustle-queue-consumee)
+- [Hustle.Pubsub.publish](#hustle-pubsub-publish)
+- [Hustle.Pubsub.Subscriber](#hustle-pubsub-subscriber)
 
 ### Queue item format
 All items added to the Hustle queue follow this basic format:
@@ -136,7 +144,7 @@ All items added to the Hustle queue follow this basic format:
 Note that `timeouts` is unimplemented because `ttr` is not currently implemented
 in the Hustle lib.
 
-### Hustle
+### Hustle class
 ```javascript
 var queue   =   new Hustle({
     db_name: 'hustle',
@@ -147,11 +155,11 @@ Creates a Hustle object.
 
 - `db_name` specifies the name we want to open the Hustle queue onto. Defaults
 to "hustle".
-- `tubes` specifies what tubes we want to be present on [open](#open).
+- `tubes` specifies what tubes we want to be present on [open](#hustle-open).
 
-### open
+### Hustle.open
 ```javascript
-queue.open({
+hustle.open({
     success: function(event) { ... },
     error: function(event) { ... }
 });
@@ -163,26 +171,33 @@ Opens/creates/upgrades the Hustle DB.
 is ready for pounding.
 - `error` is fired if something bad happens during `open`.
 
-### close
+### Hustle.close
 ```javascript
-queue.close();
+hustle.close()
+  => boolean
 ```
 
 Closes the Hustle database. Returns `true` if the DB was closed, otherwise
 returns `false` (if the DB wasn't open).
 
-### wipe
+### Hustle.is\_open
 ```javascript
-queue.wipe();
+hustle.is_open()
+  => boolean
+```
+
+### Hustle.wipe
+```javascript
+hustle.wipe();
 ```
 
 Closes the Hustle database and obliterates it. Very useful for debugging apps
 *or* if you have no interest in actually persisting your queue items, you can
-call `wipe()` each time your app loads just before you call [open](#open).
+call `wipe()` each time your app loads just before you call [open](#hustle-open).
 
-### peek
+### Hustle.Queue.peek
 ```javascript
-queue.peek(item_id, {
+hustle.Queue.peek(item_id, {
     success: function(item) { ... },
     error: function(event) { ... }
 });
@@ -199,9 +214,9 @@ item (or `null` if not found). The item will have `item.tube` and `item.state`
 set appropriately.
 - `error` is fired if there was a problem looking up that queue item.
 
-### put
+### Hustle.Queue.put
 ```javascript
-queue.put(job_data, {
+hustle.Queue.put(job_data, {
     tube: 'default',
     priority: 1024,
     success: function(item) { ... },
@@ -217,13 +232,13 @@ anything higher getting less important. Defaults to `1024`.
 - `success` is fired when the job has been added to the queue. The first
 argument is the full item that was passed back (which is in the [standard format](#queue-item-format)).
 You may want to make note of the item's ID (`item.id`) because this will allow
-you to reference the job later on if needed (via [peek](#peek), [delete](#delete),
-[bury](#bury), etc).
+you to reference the job later on if needed (via [peek](#hustle-queue-peek), [delete](#hustle-queue-delete),
+[bury](#hustle-queue-bury), etc).
 - `error` is fired when there was a problem adding the item to the queue.
 
-### reserve
+### Hustle.Queue.reserve
 ```javascript
-queue.reserve({
+hustle.Queue.reserve({
     tube: 'default',
     success: function(item) { ... },
     error: function(e) { ... }
@@ -236,13 +251,13 @@ Pulls the next available item off of the specified tube.
 - `success` is fired when the reserve command finishes. The first argument is
 the job we pulled off the queue (or `null` of the tube is empty). It is in the
 [standard format](#queue-item-format). You'll want to make note of the item's ID
-(`item.id`) because it will let you [delete](#delete) the job once you no longer
+(`item.id`) because it will let you [delete](#hustle-queue-delete) the job once you no longer
 need it.
 - `error` is fired if there was a problem reserving the item.
 
-### delete
+### Hustle.Queue.delete
 ```javascript
-queue.delete(item_id, {
+hustle.Queue.delete(item_id, {
     success: function(item) { ... },
     error: function(e) { ... }
 });
@@ -251,20 +266,20 @@ queue.delete(item_id, {
 Deletes the item with the given ID. Because item IDs are unique across all
 tubes, there's no need to specify the tube we're deleting from.
 
-It's important that if you get a job via [reserve](#reserve) and it completes
+It's important that if you get a job via [reserve](#hustle-queue-reserve) and it completes
 successfully that you then `delete` the job. If you don't do this, you're going
 to have jobs living forever in your reserved table gumming things up. If you
 really want to save a particular job for later inspection/logging, consider
-[burying](#bury) it.
+[burying](#hustle-queue-bury) it.
 
 - `success` is fired when complete. The first argument is the item (in the
 [standard format](#queue-item-format)) that was deleted or `null` if the item
 wasn't found.
 - `error` is fired when there was a problem deleting the item.
 
-### release
+### Hustle.Queue.release
 ```javascript
-queue.release(item_id, {
+hustle.Queue.release(item_id, {
     priority: 1024,
     success: function() { ... },
     error: function(e) { ... }
@@ -272,16 +287,16 @@ queue.release(item_id, {
 ```
 
 Releases an item back into the queue. This un-reserves an item and makes it
-available on its original tube for others to consume via [reserve](#reserve).
+available on its original tube for others to consume via [reserve](#hustle-queue-reserve).
 
 - `priority` specifies the new priority to set on the item being released. If
 unspecified, will default to the item's original priority.
 - `success` is fired when the item is released back into the queue.
 - `error` is fired if something went wrong while releasing.
 
-### bury
+### Hustle.Queue.bury
 ```javascript
-queue.bury(item_id, {
+hustle.Queue.bury(item_id, {
     priority: 1024,
     success: function() { ... },
     error: function(e) { ... }
@@ -291,11 +306,11 @@ queue.bury(item_id, {
 Calling `bury` moves an item into cold storage. It's a great way to keep items
 that fail a lot from plugging up your queue. You can read properties like
 [item.reserves](#queue-item-format) and determine how many times a job has been
-[reserved](#reserve) and [released](#release) and add logic to say "if this job
+[reserved](#hustle-queue-reserve) and [released](#hustle-queue-release) and add logic to say "if this job
 has been reserved over 5 times, bury it for later."
 
 Once an item is buried, it can only be released back into the queue by using
-[kick](#kick) or [kick\_job](#kick-job).
+[kick](#hustle-queue-kick) or [kick\_job](#hustle-queue-kick-job).
 
 Items are buried in FIFO order.
 
@@ -304,15 +319,15 @@ If unspecified, will use the item's current priority value.
 - `success` is fired when the bury operation is finished.
 - `error` is fired if something goes wrong while burying.
 
-### kick
+### Hustle.Queue.kick
 ```javascript
-queue.kick(num, {
+hustle.Queue.kick(num, {
     success: function(count) { ... },
     error: function(e) { ... }
 });
 ```
 
-Kick removes the first `num` items from the [bury](#bury) state and puts them
+Kick removes the first `num` items from the [bury](#hustle-queue-bury) state and puts them
 into a ready state in their respective tubes.
 
 - `num` is the number of jobs to kick
@@ -320,24 +335,24 @@ into a ready state in their respective tubes.
 the actual number of jobs that were kicked.
 - `error` is fired if something goes wrong while kicking.
 
-### kick\_job
+### Hustle.Queue.kick\_job
 ```javascript
-queue.kick_job(item_id, {
+hustle.Queue.kick_job(item_id, {
     success: function() { ... },
     error: function(e) { ... }
 });
 ```
 
 Kicks a specific item by id, as opposed to kicking the first N items (like
-[kick](#kick)).
+[kick](#hustle-queue-kick)).
 
 - `item_id` is the ID of the item we want to kick.
 - `success` is fired when the operation completes.
 - `error` is fired if something goes wrong while kicking.
 
-### count\_ready
+### Hustle.Queue.count\_ready
 ```javascript
-queue.count_ready(tube, {
+hustle.Queue.count_ready(tube, {
     success: function(count) { ... },
     error: function(e) { ... }
 });
@@ -350,22 +365,34 @@ Count the number of *ready* items in a tube.
 count.
 - `error` is fired when something goes wrong.
 
-### consume
+### Hustle.Queue.Consumer
 ```javascript
-queue.consume(tube, consume_fn, {
-    delay: 100
-}) => function
+var consumer = new hustle.Queue.Consumer(consume_fn, {
+    delay: 100,
+    tube: 'default'
+});
 ```
 
 Consume provides an interface to watch a particular tube and call a function for
-each item that is [put](#put) into it. It currently works by polling every X
+each item that is [put](#hustle-queue-put) into it. It currently works by polling every X
 milliseconds (100 by default).
 
-- `tube` is the name of the tube we want to devour.
 - `consume_fn` is a function, of one argument, which will be called for each
 job entered into the tube. The value passed in is a [queue item](#queue-item-format).
+- `tube` is the name of the tube we want to devour (default is "default").
 - `delay` is the delay (in ms) between polls to the tube. IndexedDB doesn't have
 a blocking interface, so polling is the only option, as far as I know.
+
+The returned object has two methods:
+
+- `consumer.start()` starts the consumer. Note that it starts on instantiation,
+so you don't need to call this unless you previously called `stop()`.
+- `consumer.stop()` stops the consumer from polling the queue.
+
+### Hustle.Pubsub.publish
+
+### Hustle.Pubsub.Subscriber
+
 
 Tests
 -----
