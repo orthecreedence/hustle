@@ -1,12 +1,11 @@
 Hustle: A javascript queuing library persisted over IndexedDB
 =============================================================
-Hustle is a queuing system for Javascript built on top of IndexedDB. It takes
-heavy inspiration from [beanstalkd](http://kr.github.io/beanstalkd/).
+Hustle is a javascript queuing and messaging library built on top of IndexedDB.
 
 The idea is that sometimes you have two pieces of an application that need to
 talk to each other, but don't (or shouldn't) have access to each other's memory.
 Hustle lets them talk by passing messages, giving the pieces of your app a
-framework for handling tasks.
+framework for handling tasks and passing messages, all persisted.
 
 Everything in Hustle is asynchronous so until enough people bug me to implement
 futures or promises or deferreds or whatever the hell they're called this week,
@@ -23,13 +22,14 @@ Getting started
 var hustle   =   new Hustle({ tubes: ['jobs'] });
 ```
 
-### Queuing
+Create our Hustle object. This provides the interface for all our messaging and
+queuing needs. Note that we specify `tubes`. Think of a tube as a *table* in a
+database: it logically separates the different kinds of queue items you'll be
+passing through Hustle. Throughout the [Queue API](#hustlequeue), you're able
+to specify which tube you're operating on. If undefined, the `default` tube is
+used (which is always created on init).
 
-Here we create a new Hustle queue. Note that we specify `tubes`. Think of a tube
-as a *table* in a database: it logically separates the different kinds of
-messages yuo'll be passing through Hustle. Throughout the API, you're able to
-specify which tube you're operating on. If undefined, the `default` tube is used
-(which is always created on init).
+### Queuing
 
 ```javascript
 hustle.open({
@@ -41,6 +41,8 @@ hustle.open({
     }
 });
 ```
+
+[Open](#hustleopen) the Hustle database so we can start messaging and queueing.
 
 ```javascript
 hustle.Queue.put({task: 'rob_bank'}, {
@@ -54,10 +56,10 @@ hustle.Queue.put({task: 'rob_bank'}, {
 });
 ```
 
-Now we put a new message into the queue. The first argument, `{task: 'rob_bank'}`,
-is our message. This can be any arbitrary javascript object. Once complete, our
-`success` callback is given a queue item (with a queue-assigned `id` value we
-can use to reference the message with later on).
+Now we [put](#hustlequeueput) a new message into the queue. The first argument,
+`{task: 'rob_bank'}`, is our message. This can be any arbitrary javascript
+object. Once complete, our `success` callback is given a queue item (with a
+queue-assigned `id` value we can use to reference the message with later on).
 
 ```javascript
 hustle.Queue.reserve({
@@ -71,9 +73,9 @@ hustle.Queue.reserve({
 });
 ```
 
-Now we "reserve" an item. This removes the job from its "ready" state and puts
-it into a reserved state, meaning that nobody else can reserve that job unless
-it's [released](#hustlequeuerelease) back onto the tube.
+Now we [reserve](#hustlequeuereserve) an item. This removes the job from its
+"ready" state and puts it into a reserved state, meaning that nobody else can
+reserve that job unless it's [released](#hustlequeuerelease) back onto the tube.
 
 ```javascript
 hustle.Queue.delete(item.id, {
@@ -87,9 +89,9 @@ hustle.Queue.delete(item.id, {
 ```
 
 Once you are satisfied that a job has fulfilled its purpose, it makes sense to
-delete it so it doesn't sit there gumming up your reserved items. Note that we
-don't have to specify a tube for `del`...the command works across all tubes, as
-all job IDs are unique across tubes.
+[delete](#hustlequeuedelete) it so it doesn't sit there gumming up your reserved
+items. Note that we don't have to specify a tube for `del`...the command works
+across all tubes, as all job IDs are unique across tubes.
 
 ```javascript
 var consumer = new hustle.Queue.Consumer(function(job) {
@@ -97,8 +99,10 @@ var consumer = new hustle.Queue.Consumer(function(job) {
     hustle.Queue.delete(job.id);
 }, { tube: 'jobs' });
 ```
-A consumer listens to a particular tube and calls the given function for each
-job it gets.
+
+A [consumer](#hustlequeueconsumer) listens to a particular tube and calls the
+given function for each job it gets. It will do this indefinitely until
+`consumer.stop()` is called.
 
 ### Pubsub
 
@@ -126,12 +130,6 @@ message.
 
 API
 ---
-The Hustle API tries to stay as close to beanstalkd as possible, so for those of
-you familiar with the beanstalkd protocol, this should all make sense. Either
-way, this will describe how to effectively use Hustle.
-
-It's important to note: time-to-run (`ttr`) and job delaying are not yet
-implemented.
 
 - [Hustle class](#hustle-class)
 - [Hustle.open](#hustleopen)
@@ -214,6 +212,12 @@ time your app loads just before you call [open](#hustleopen).
 The Hustle queue system allows jobs to be atomically grabbed and operated on
 by any number of workers. Each job can only be reserved by one worker at a time,
 make the queue great for running backgroun tasks.
+
+Hustle.Queue takes heavy inspiration from [beanstalkd](http://kr.github.io/beanstalkd/),
+in fact most functions have the same names as the [beanstalkd protocol](https://github.com/kr/beanstalkd/blob/master/doc/protocol.txt).
+
+It's important to note that currently, delayed jobs and time-to-run (`ttr`) are
+not implemented.
 
 #### Queue item format
 All items added to the Hustle queue follow this basic format:
