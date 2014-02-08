@@ -97,6 +97,9 @@ The Hustle API tries to stay as close to beanstalkd as possible, so for those of
 you familiar with the beanstalkd protocol, this should all make sense. Either
 way, this will describe how to effectively use Hustle.
 
+It's important to note: time-to-run (`ttr`) and job delaying are not yet
+implemented.
+
 - [Queue item format](#queue-item-format)
 - [Hustle class](#hustle)
 - [Hustle.open](#open)
