@@ -29,8 +29,6 @@ passing through Hustle. Throughout the [Queue API](#hustlequeue), you're able
 to specify which tube you're operating on. If undefined, the `default` tube is
 used (which is always created on init).
 
-### Queuing
-
 ```javascript
 hustle.open({
     success: function() {
@@ -43,6 +41,8 @@ hustle.open({
 ```
 
 [Open](#hustleopen) the Hustle database so we can start messaging and queueing.
+
+### Queuing
 
 ```javascript
 hustle.Queue.put({task: 'rob_bank'}, {
