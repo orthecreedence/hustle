@@ -117,7 +117,7 @@ access a job at a time.
 ```javascript
 hustle.Pubsub.publish('complaints', 'my roof is leaking. no, seriously it is', {
     success: function(msg) {
-        console.log('send message ', msg.id);
+        console.log('successfully sent message ', msg.id);
     }
 });
 ```
