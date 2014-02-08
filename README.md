@@ -369,7 +369,7 @@ a blocking interface, so polling is the only option, as far as I know.
 
 Tests
 -----
-Just navigate ur browser to Hustle/tests/ and let the magic happen.
+Just navigate ur browser to `Hustle/test/` and let the magic happen.
 
 License
 -------
