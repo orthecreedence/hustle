@@ -104,8 +104,8 @@ job it gets.
 ### Pubsub
 
 ```javascript
-var subscriber = new hustle.Pubsub.Subscriber('mychannel', function(msg) {
-    console.log('got a message! ', msg);
+var subscriber = new hustle.Pubsub.Subscriber('complaints', function(msg) {
+    console.log('got a complaint! ', msg);
 });
 ```
 
@@ -115,7 +115,7 @@ all messages that flow through it, unlike a queue where only one consumer can
 access a job at a time.
 
 ```javascript
-hustle.Pubsub.publish('mychannel', 'my roof is leaking. no, seriously it is', {
+hustle.Pubsub.publish('complaints', 'my roof is leaking. no, seriously it is', {
     success: function(msg) {
         console.log('send message ', msg.id);
     }
