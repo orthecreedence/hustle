@@ -424,13 +424,7 @@ describe('Hustle pubsub operations', function() {
 		}, 1000);
 	});
 
-	it('can clear a database', function(done) {
-		var res	=	hustle.wipe();
-		expect(res).toBe(true);
-		done();
-	});
-
-	it('can open a database', function(done) {
+	it('can open a database (again)', function(done) {
 		var db	=	null;
 		var finished	=	function()
 		{
@@ -505,6 +499,67 @@ describe('Hustle pubsub operations', function() {
 		hustle.Pubsub.publish('herp', 'stop that bending', opts);
 		hustle.Pubsub.publish('herp', 'your dog will love it', opts);
 		hustle.Pubsub.publish('herp', 'impress the ladies', opts);
+	});
+
+	it('will order messages properly', function(done) {
+		var num_messages	=	10;
+		var got_messages	=	0;
+		var errors			=	[];
+		var div				=	10;
+		var finalval		=	div;
+		var sub				=	null;
+
+		// calculate a value that will only happen in the given order
+		for(var i = 0; i < num_messages; i++)
+		{
+			finalval	=	Math.log(finalval) + (i + 1);
+		}
+
+		var finish	=	function()
+		{
+			got_messages++;
+			if(got_messages < num_messages) return;
+			expect(errors.length).toBe(0);
+			expect(div).toBe(finalval);
+			sub.stop();
+			done();
+		};
+
+		var opts	=	{
+			error: function(e) {
+				errors.push(e);
+				console.error('err: ', e);
+				finish();
+			}
+		};
+
+		sub	=	new hustle.Pubsub.Subscriber('order', function(msg) {
+			div	=	Math.log(div) + (msg.data.val + 1);
+			finish();
+		}, opts);
+		sub.stop();
+
+		var sent		=	0;
+		var do_start	=	function()
+		{
+			sent++;
+			if(sent < num_messages) return false;
+			sub.start();
+		};
+
+		for(var i = 0; i < num_messages; i++)
+		{
+			(function(val) {
+				hustle.Pubsub.publish('order', {val: val}, {
+					success: function(msg) {
+						do_start();
+					},
+					error: function(e) {
+						console.error('err: ', e);
+					}
+				});
+			})(i);
+		}
 	});
 
 	it('can close a database', function(done) {
