@@ -74,7 +74,7 @@ hustle.Queue.reserve({
 
 Now we "reserve" an item. This removes the job from its "ready" state and puts
 it into a reserved state, meaning that nobody else can reserve that job unless
-it's [released](#hustle-queue-release) back onto the tube.
+it's [released](#hustlequeuerelease) back onto the tube.
 
 ```javascript
 hustle.Queue.delete(item.id, {
@@ -110,19 +110,19 @@ implemented.
 - [Hustle.open](#hustle-open)
 - [Hustle.close](#hustle-close)
 - [Hustle.is\_open](#hustle-is-open);
-- [Hustle.wipe](#hustle-queue-wipe)
-- [Hustle.Queue.peek](#hustle-queue-peek)
-- [Hustle.Queue.put](#hustle-queue-put)
-- [Hustle.Queue.reserve](#hustle-queue-reserve)
-- [Hustle.Queue.delete](#hustle-queue-delete)
-- [Hustle.Queue.release](#hustle-queue-release)
-- [Hustle.Queue.bury](#hustle-queue-bury)
-- [Hustle.Queue.kick](#hustle-queue-kick)
-- [Hustle.Queue.kick\_job](#hustle-queue-kick-job)
-- [Hustle.Queue.count\_ready](#hustle-queue-count-ready)
-- [Hustle.Queue.Consumer](#hustle-queue-consumee)
-- [Hustle.Pubsub.publish](#hustle-pubsub-publish)
-- [Hustle.Pubsub.Subscriber](#hustle-pubsub-subscriber)
+- [Hustle.wipe](#hustlequeuewipe)
+- [Hustle.Queue.peek](#hustlequeuepeek)
+- [Hustle.Queue.put](#hustlequeueput)
+- [Hustle.Queue.reserve](#hustlequeuereserve)
+- [Hustle.Queue.delete](#hustlequeuedelete)
+- [Hustle.Queue.release](#hustlequeuerelease)
+- [Hustle.Queue.bury](#hustlequeuebury)
+- [Hustle.Queue.kick](#hustlequeuekick)
+- [Hustle.Queue.kick\_job](#hustlequeuekick-job)
+- [Hustle.Queue.count\_ready](#hustlequeuecount-ready)
+- [Hustle.Queue.Consumer](#hustlequeueconsumee)
+- [Hustle.Pubsub.publish](#hustlepubsubpublish)
+- [Hustle.Pubsub.Subscriber](#hustlepubsubsubscriber)
 
 ### Queue item format
 All items added to the Hustle queue follow this basic format:
@@ -232,8 +232,8 @@ anything higher getting less important. Defaults to `1024`.
 - `success` is fired when the job has been added to the queue. The first
 argument is the full item that was passed back (which is in the [standard format](#queue-item-format)).
 You may want to make note of the item's ID (`item.id`) because this will allow
-you to reference the job later on if needed (via [peek](#hustle-queue-peek), [delete](#hustle-queue-delete),
-[bury](#hustle-queue-bury), etc).
+you to reference the job later on if needed (via [peek](#hustlequeuepeek), [delete](#hustlequeuedelete),
+[bury](#hustlequeuebury), etc).
 - `error` is fired when there was a problem adding the item to the queue.
 
 ### Hustle.Queue.reserve
@@ -251,7 +251,7 @@ Pulls the next available item off of the specified tube.
 - `success` is fired when the reserve command finishes. The first argument is
 the job we pulled off the queue (or `null` of the tube is empty). It is in the
 [standard format](#queue-item-format). You'll want to make note of the item's ID
-(`item.id`) because it will let you [delete](#hustle-queue-delete) the job once you no longer
+(`item.id`) because it will let you [delete](#hustlequeuedelete) the job once you no longer
 need it.
 - `error` is fired if there was a problem reserving the item.
 
@@ -266,11 +266,11 @@ hustle.Queue.delete(item_id, {
 Deletes the item with the given ID. Because item IDs are unique across all
 tubes, there's no need to specify the tube we're deleting from.
 
-It's important that if you get a job via [reserve](#hustle-queue-reserve) and it completes
+It's important that if you get a job via [reserve](#hustlequeuereserve) and it completes
 successfully that you then `delete` the job. If you don't do this, you're going
 to have jobs living forever in your reserved table gumming things up. If you
 really want to save a particular job for later inspection/logging, consider
-[burying](#hustle-queue-bury) it.
+[burying](#hustlequeuebury) it.
 
 - `success` is fired when complete. The first argument is the item (in the
 [standard format](#queue-item-format)) that was deleted or `null` if the item
@@ -287,7 +287,7 @@ hustle.Queue.release(item_id, {
 ```
 
 Releases an item back into the queue. This un-reserves an item and makes it
-available on its original tube for others to consume via [reserve](#hustle-queue-reserve).
+available on its original tube for others to consume via [reserve](#hustlequeuereserve).
 
 - `priority` specifies the new priority to set on the item being released. If
 unspecified, will default to the item's original priority.
@@ -306,11 +306,11 @@ hustle.Queue.bury(item_id, {
 Calling `bury` moves an item into cold storage. It's a great way to keep items
 that fail a lot from plugging up your queue. You can read properties like
 [item.reserves](#queue-item-format) and determine how many times a job has been
-[reserved](#hustle-queue-reserve) and [released](#hustle-queue-release) and add logic to say "if this job
+[reserved](#hustlequeuereserve) and [released](#hustlequeuerelease) and add logic to say "if this job
 has been reserved over 5 times, bury it for later."
 
 Once an item is buried, it can only be released back into the queue by using
-[kick](#hustle-queue-kick) or [kick\_job](#hustle-queue-kick-job).
+[kick](#hustlequeuekick) or [kick\_job](#hustlequeuekick-job).
 
 Items are buried in FIFO order.
 
@@ -327,7 +327,7 @@ hustle.Queue.kick(num, {
 });
 ```
 
-Kick removes the first `num` items from the [bury](#hustle-queue-bury) state and puts them
+Kick removes the first `num` items from the [bury](#hustlequeuebury) state and puts them
 into a ready state in their respective tubes.
 
 - `num` is the number of jobs to kick
@@ -344,7 +344,7 @@ hustle.Queue.kick_job(item_id, {
 ```
 
 Kicks a specific item by id, as opposed to kicking the first N items (like
-[kick](#hustle-queue-kick)).
+[kick](#hustlequeuekick)).
 
 - `item_id` is the ID of the item we want to kick.
 - `success` is fired when the operation completes.
@@ -374,7 +374,7 @@ var consumer = new hustle.Queue.Consumer(consume_fn, {
 ```
 
 Consume provides an interface to watch a particular tube and call a function for
-each item that is [put](#hustle-queue-put) into it. It currently works by polling every X
+each item that is [put](#hustlequeueput) into it. It currently works by polling every X
 milliseconds (100 by default).
 
 - `consume_fn` is a function, of one argument, which will be called for each
