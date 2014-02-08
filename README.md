@@ -13,8 +13,7 @@ futures or promises or deferreds or whatever the hell they're called this week,
 you're stuck in callback hell.
 
 - [Getting started](#getting-started)
-- [Queue API](#queue-api)
-- [Pubsub API](#pubsub-api)
+- [API](#api)
 - [Tests](#tests)
 - [License](#license)
 
