@@ -137,7 +137,7 @@ implemented.
 - [Hustle class](#hustle-class)
 - [Hustle.open](#hustleopen)
 - [Hustle.close](#hustleclose)
-- [Hustle.is\_open](#hustleis-open);
+- [Hustle.is\_open](#hustleis_open);
 - [Hustle.wipe](#hustlequeuewipe)
 - [Hustle.Queue](#hustlequeue)
   - [Queue item format](#queue-item-format)
@@ -148,8 +148,8 @@ implemented.
   - [Hustle.Queue.release](#hustlequeuerelease)
   - [Hustle.Queue.bury](#hustlequeuebury)
   - [Hustle.Queue.kick](#hustlequeuekick)
-  - [Hustle.Queue.kick\_job](#hustlequeuekick-job)
-  - [Hustle.Queue.count\_ready](#hustlequeuecount-ready)
+  - [Hustle.Queue.kick\_job](#hustlequeuekick_job)
+  - [Hustle.Queue.count\_ready](#hustlequeuecount_ready)
   - [Hustle.Queue.Consumer](#hustlequeueconsumee)
 - [Hustle.Pubsub](#hustlepubsub)
   - [Hustle.Pubsub.publish](#hustlepubsubpublish)
