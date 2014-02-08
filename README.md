@@ -201,7 +201,7 @@ set appropriately.
 
 ### put
 ```javascript
-queue.put({my_data: 'lol'}, {
+queue.put(job_data, {
     tube: 'default',
     priority: 1024,
     success: function(item) { ... },
