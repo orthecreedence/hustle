@@ -1,5 +1,5 @@
-Hustle: A beantalkd-like javascript queuing library persisted over IndexedDB
-============================================================================
+Hustle: A javascript queuing library persisted over IndexedDB
+=============================================================
 Hustle is a queuing system for Javascript built on top of IndexedDB. It takes
 heavy inspiration from [beanstalkd](http://kr.github.io/beanstalkd/).
 
