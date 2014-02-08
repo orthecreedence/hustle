@@ -1,5 +1,5 @@
-Hustle: a standalone queue on top of IndexedDB
-==============================================
+Hustle: A beantalkd-like javascript queuing library persisted over IndexedDB
+============================================================================
 Hustle is a queuing system for Javascript built on top of IndexedDB. It takes
 heavy inspiration from [beanstalkd](http://kr.github.io/beanstalkd/).
 
@@ -356,6 +356,10 @@ milliseconds (100 by default).
 job entered into the tube. The value passed in is a [queue item](#queue-item-format).
 - `delay` is the delay (in ms) between polls to the tube. IndexedDB doesn't have
 a blocking interface, so polling is the only option, as far as I know.
+
+Tests
+-----
+Just navigate ur browser to Hustle/tests/ and let the magic happen.
 
 License
 -------
