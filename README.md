@@ -493,11 +493,11 @@ from the channel. Each passed message will be in the [standard format](#message-
 
 The object returned has two methods:
 
-- `start` starts subscribing. Note that the Subscriber class starts on
-instantiation, so you'll only need to call `consumer.start()` after calling
+- `consumer.start()` starts subscribing. Note that the Subscriber class starts
+on instantiation, so you'll only need to call `consumer.start()` after calling
 `consumer.stop()`.
-- `stop` stops the consumer from listening to the channel. Can be started again
-with `consumer.start()`
+- `consumer.stop()` stops the consumer from listening to the channel. Can be
+started again with `consumer.start()`
 
 Tests
 -----
