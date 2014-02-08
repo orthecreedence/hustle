@@ -137,7 +137,7 @@ implemented.
 - [Hustle.open](#hustleopen)
 - [Hustle.close](#hustleclose)
 - [Hustle.is\_open](#hustleis_open)
-- [Hustle.wipe](#hustlequeuewipe)
+- [Hustle.wipe](#hustlewipe)
 - [Hustle.Queue](#hustlequeue)
   - [Queue item format](#queue-item-format)
   - [Hustle.Queue.peek](#hustlequeuepeek)
@@ -149,7 +149,7 @@ implemented.
   - [Hustle.Queue.kick](#hustlequeuekick)
   - [Hustle.Queue.kick\_job](#hustlequeuekick_job)
   - [Hustle.Queue.count\_ready](#hustlequeuecount_ready)
-  - [Hustle.Queue.Consumer](#hustlequeueconsumee)
+  - [Hustle.Queue.Consumer](#hustlequeueconsumer)
 - [Hustle.Pubsub](#hustlepubsub)
   - [Message item format](#message-item-format)
   - [Hustle.Pubsub.publish](#hustlepubsubpublish)
@@ -350,7 +350,7 @@ that fail a lot from plugging up your queue. You can read properties like
 has been reserved over 5 times, bury it for later."
 
 Once an item is buried, it can only be released back into the queue by using
-[kick](#hustlequeuekick) or [kick\_job](#hustlequeuekick-job).
+[kick](#hustlequeuekick) or [kick\_job](#hustlequeuekick_job).
 
 Items are buried in FIFO order.
 
