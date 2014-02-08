@@ -77,6 +77,9 @@ Now we [reserve](#hustlequeuereserve) an item. This removes the job from its
 "ready" state and puts it into a reserved state, meaning that nobody else can
 reserve that job unless it's [released](#hustlequeuerelease) back onto the tube.
 
+Note that reserve's `success` function is triggered even if no items are found,
+so be sure to check if `item` is null before using.
+
 ```javascript
 hustle.Queue.delete(item.id, {
     success: function() {
@@ -253,6 +256,9 @@ has a unique ID.
 
 Items grabbed by `peek` follow the [standard item format](#queue-item-format).
 
+Note that peek's `success` function is triggered even if the item isn't found,
+so be sure to check if `item` is null before using.
+
 - `success` is fired when the lookup is done. The first argument is the queue
 item (or `null` if not found). The item will have `item.tube` and `item.state`
 set appropriately.
@@ -290,6 +296,9 @@ hustle.Queue.reserve({
 ```
 
 Pulls the next available item off of the specified tube.
+
+Note that reserve's `success` function is triggered even if no items are found,
+so be sure to check if `item` is null before using.
 
 - `tube` specifies which tube to pull from. Defaults to "default".
 - `success` is fired when the reserve command finishes. The first argument is
