@@ -112,10 +112,10 @@ var subscriber = new hustle.Pubsub.Subscriber('complaints', function(msg) {
 });
 ```
 
-A pubsub subscriber listens to the given channel for messages, calling the given
-function for each one. Any number of subscribers can listen to a channel and get
-all messages that flow through it, unlike a queue where only one consumer can
-access a job at a time.
+A pubsub [subscriber](#hustlepubsubsubscriber) listens to the given channel for
+messages, calling the given function for each one. Any number of subscribers can
+listen to a channel and get all messages that flow through it, unlike a queue
+where only one consumer can access a job at a time.
 
 ```javascript
 hustle.Pubsub.publish('complaints', 'my roof is leaking. no, seriously it is', {
@@ -125,8 +125,8 @@ hustle.Pubsub.publish('complaints', 'my roof is leaking. no, seriously it is', {
 });
 ```
 
-Send a message to a channel. All subscribers of that channel will get the
-message.
+[Publish](#hustlepubsubpublish) a message to a channel. All subscribers of that
+channel will get the message.
 
 API
 ---
