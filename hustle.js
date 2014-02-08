@@ -3,8 +3,8 @@
 	var version		=	'0.1.1';
 	var db_version	=	3;
 
-    var indexedDB	=	window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB || window.oIndexedDB || window.msIndexedDB;
-    var IDBKeyRange	=	window.IDBKeyRange || window.webkitIDBKeyRange
+	var indexedDB	=	window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB || window.oIndexedDB || window.msIndexedDB;
+	var IDBKeyRange	=	window.IDBKeyRange || window.webkitIDBKeyRange
 
 	if(!indexedDB) throw 'IndexedDB required';
 
