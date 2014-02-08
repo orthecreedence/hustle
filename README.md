@@ -32,10 +32,10 @@ used (which is always created on init).
 ```javascript
 hustle.open({
     success: function() {
-        console.log('queue opened!');
+        console.log('database opened!');
     },
     error: function(e) {
-        console.error('error opening queue: ', e);
+        console.error('error opening database: ', e);
     }
 });
 ```
