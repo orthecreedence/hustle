@@ -211,7 +211,7 @@ Closes the Hustle database and obliterates it. Very useful for debugging apps
 *or* if you have no interest in actually persisting, you can call `wipe()` each
 time your app loads just before you call [open](#hustleopen).
 
-### Hustle Queue
+### Hustle.Queue
 The Hustle queue system allows jobs to be atomically grabbed and operated on
 by any number of workers. Each job can only be reserved by one worker at a time,
 make the queue great for running backgroun tasks.
