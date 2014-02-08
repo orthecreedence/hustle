@@ -1,11 +1,19 @@
-Hustle: A javascript queuing / messaging library persisted over IndexedDB
+Hustle: A persistent javascript queuing/messaging library
 =============================================================
 Hustle is a javascript queuing and messaging library built on top of IndexedDB.
 
 The idea is that sometimes you have two pieces of an application that need to
 talk to each other, but don't (or shouldn't) have access to each other's memory.
-Hustle lets them talk by passing messages, giving the pieces of your app a
-framework for handling tasks and passing messages, all persisted.
+Hustle lets them talk through IndexedDB, giving your app a framework for
+handling tasks and passing messages, all persisted.
+
+If the use case sounds very specific, it is. Hustle was built to make the
+syncing system in [Turtl](https://turtl.it) more scalable by breaking out
+messaging and queuing into a separate system than having it married to the main
+database. It shines when you have an app that works offline but syncs to a
+server somewhere: you can queue up changes to your local data and have them
+synced to your API when a connection becomes available without having to worry
+about losing your jobs/messages between app restarts.
 
 Everything in Hustle is asynchronous so until enough people bug me to implement
 futures or promises or deferreds or whatever the hell they're called this week,
