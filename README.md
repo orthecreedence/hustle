@@ -8,7 +8,14 @@ talk to each other, but don't (or shouldn't) have access to each other's memory.
 Hustle lets them talk by passing messages, giving the pieces of your app a
 framework for handling tasks.
 
-Everything in Hustle is asynchronous.
+Everything in Hustle is asynchronous so until enough people bug me to implement
+futures or promises or deferreds whatever the hell they're called this week,
+you're stuck in callback hell.
+
+- [Getting started](#getting-started)
+- [API](#api)
+- [Tests](#tests)
+- [License](#license)
 
 Getting started
 ---------------
