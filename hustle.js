@@ -1,6 +1,6 @@
 (function(window, undefined) {
 	"use strict";
-	var version		=	'0.1.3';
+	var version		=	'0.1.4';
 
 	var indexedDB	=	window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB || window.oIndexedDB || window.msIndexedDB;
 	var IDBKeyRange	=	window.IDBKeyRange || window.webkitIDBKeyRange
