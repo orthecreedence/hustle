@@ -749,6 +749,15 @@
 				options || (options = {});
 
 				if(do_stop || !db) return;
+				if(coptions.enable_fn)
+				{
+					var res	=	coptions.enable_fn();
+					if(!res)
+					{
+						do_stop	=	true;
+						return false;
+					}
+				}
 
 				// grab an item from the tube
 				reserve({
@@ -850,6 +859,15 @@
 				options || (options = {});
 
 				if(do_stop || !db) return;
+				if(soptions.enable_fn)
+				{
+					var res	=	soptions.enable_fn();
+					if(!res)
+					{
+						do_stop	=	true;
+						return false;
+					}
+				}
 
 				housekeeping();
 

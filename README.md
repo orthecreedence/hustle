@@ -428,8 +428,10 @@ count.
 #### Hustle.Queue.Consumer
 ```javascript
 var consumer = new hustle.Queue.Consumer(consume_fn, {
+    tube: 'default',
     delay: 100,
-    tube: 'default'
+    enable_fn: function() { ... },
+    error: function(e) { ... }
 });
 ```
 
@@ -442,6 +444,10 @@ job entered into the tube. The value passed in is a [queue item](#queue-item-for
 - `tube` is the name of the tube we want to devour (default is "default").
 - `delay` is the delay (in ms) between polls to the tube. IndexedDB doesn't have
 a blocking interface, so polling is the only option, as far as I know.
+- `enable_fn` is an optional function you pass that the consumer calls before
+each time it polls for queue items. If the function returns `false` then the
+polling is stopped.
+- `error` is triggered if there are any problems while consuming.
 
 The returned object has two methods:
 
@@ -486,6 +492,7 @@ argument being the message added in the [standard format](#message-item-format).
 ```javascript
 var subscriber = new hustle.Pubsub.Subscriber(channel, dispatch_fn, {
     delay: 100,
+    enable_fn: function() { ... },
     error: function(e) { ... }
 });
 ```
@@ -497,6 +504,9 @@ recieved to the `dispatch_fn`.
 - `dispatch_fn` is a function with one argument that will be passed message
 from the channel. Each passed message will be in the [standard format](#message-item-format).
 - `delay` is how many ms between polls to the messages table (defaults to 100).
+- `enable_fn` is an optional function you pass that the subscriber calls before
+each time it polls for queue items. If the function returns `false` then the
+polling is stopped.
 - `error` is triggered if there are any problems while subscribed.
 
 The object returned has two methods:
