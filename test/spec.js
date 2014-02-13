@@ -424,6 +424,12 @@ describe('Hustle pubsub operations', function() {
 		}, 1000);
 	});
 
+	it('can clear a database (yes, again)', function(done) {
+		var res	=	hustle.wipe();
+		expect(res).toBe(true);
+		done();
+	});
+
 	it('can open a database (again)', function(done) {
 		var db	=	null;
 		var finished	=	function()

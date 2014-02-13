@@ -89,15 +89,15 @@
 				trx.onerror		=	function(e) { if(options.error) options.error(e); }
 
 				var store	=	trx.objectStore(tbl.pubsub);
-				store.openCursor().onsuccess	=	function(e)
+				var index	=	store.index('created');
+				var bound	=	new Date().getTime() - msg_lifetime;
+				var range	=	IDBKeyRange.upperBound(bound);
+				index.openCursor(range).onsuccess	=	function(e)
 				{
 					var cursor	=	e.target.result;
 					if(cursor)
 					{
-						if(cursor.value.created < (new Date().getTime() - msg_lifetime))
-						{
-							store.delete(cursor.value.id);
-						}
+						store.delete(cursor.value.id);
 						cursor.continue();
 					}
 				}
@@ -187,7 +187,10 @@
 				});
 				update_table_schema(e, tbl.pubsub, {
 					autoincrement: true,
-					indexes: { channel: { index: 'channel', unique: false } }
+					indexes: {
+						channel: { index: 'channel', unique: false },
+						created: { index: 'created', unique: false }
+					}
 				});
 
 				for(var i = 0; i < tubes.length; i++)
