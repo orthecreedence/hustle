@@ -1,6 +1,7 @@
 (function(window, undefined) {
 	"use strict";
-	var version		=	'0.1.4';
+	var version				=	'0.1.4';
+	var internal_db_version	=	4;
 
 	var indexedDB	=	window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB || window.oIndexedDB || window.msIndexedDB;
 	var IDBKeyRange	=	window.IDBKeyRange || window.webkitIDBKeyRange
@@ -162,7 +163,8 @@
 
 			if(db) throw new HustleDBOpened('db is already open');
 
-			var req		=	indexedDB.open(db_name, db_version);
+			var version	=	(internal_db_version * 10000) + db_version;
+			var req		=	indexedDB.open(db_name, internal_db_version);
 			req.onerror	=	function(e)
 			{
 				if(options.error) options.error(e);
