@@ -1,7 +1,7 @@
 (function(window, undefined) {
 	"use strict";
 	var version		=	'0.1.1';
-	var db_version	=	3;
+	var db_version	=	4;
 
 	var indexedDB	=	window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB || window.oIndexedDB || window.msIndexedDB;
 	var IDBKeyRange	=	window.IDBKeyRange || window.webkitIDBKeyRange
@@ -916,7 +916,7 @@
 			peek: peek,
 			put: put,
 			reserve: reserve,
-			'delete': del,
+			delete: del,
 			release: release,
 			bury: bury,
 			kick: kick,
@@ -928,16 +928,42 @@
 			publish: publish,
 			Subscriber: Subscriber
 		}
-		var debug	=	{
-			get_db: function() { return db; }
-		};
 		this.open		=	open;
 		this.close		=	close;
 		this.is_open	=	function() { return !!db; };
 		this.wipe		=	wipe;
 		this.Pubsub		=	Pubsub;
 		this.Queue		=	Queue;
-		this.debug		=	debug;
+		this.promisify	=	function()
+		{
+			var _self	=	this;
+			var do_promisify	=	function(fn, opts_idx)
+			{
+				return function() {
+					var args	=	Array.prototype.slice.call(arguments, 0);
+					if(!args[opts_idx]) args[opts_idx] = {};
+					return new Promise(function(success, error) {
+						args[opts_idx].success	=	success;
+						args[opts_idx].error	=	error;
+						fn.apply(_self, args);
+					});
+				};
+			};
+			this.open				=	do_promisify(this.open, 0);
+			this.Queue.peek			=	do_promisify(this.Queue.peek, 1);
+			this.Queue.put			=	do_promisify(this.Queue.put, 1);
+			this.Queue.reserve		=	do_promisify(this.Queue.reserve, 0);
+			this.Queue.delete		=	do_promisify(this.Queue.delete, 1);
+			this.Queue.release		=	do_promisify(this.Queue.release, 1);
+			this.Queue.bury			=	do_promisify(this.Queue.bury, 1);
+			this.Queue.kick			=	do_promisify(this.Queue.kick, 1);
+			this.Queue.kick_job		=	do_promisify(this.Queue.kick_job, 1);
+			this.Queue.count_ready	=	do_promisify(this.Queue.count_ready, 1);
+			this.Pubsub.publish		=	do_promisify(this.Pubsub.publish, 2);
+		}.bind(this);
+		this.debug		=	{
+			get_db: function() { return db; }
+		};
 
 		return this;
 	};

@@ -2,7 +2,7 @@ describe('Hustle', function() {
 	var hustle	=	new Hustle();
 
 	it('has known exported functions', function() {
-		var main_exports	=	['open', 'close', 'is_open', 'wipe'];
+		var main_exports	=	['open', 'close', 'is_open', 'wipe', 'promisify'];
 		var queue_exports	=	['peek', 'put', 'reserve', 'delete', 'release', 'bury', 'kick', 'kick_job', 'count_ready', 'Consumer']; 
 		var pubsub_exports	=	['publish', 'Subscriber']; 
 		for(var i = 0; i < main_exports.length; i++)
@@ -560,6 +560,157 @@ describe('Hustle pubsub operations', function() {
 				});
 			})(i);
 		}
+	});
+
+	it('can close a database', function(done) {
+		var res	=	hustle.close();
+		expect(res).toBe(true);
+		expect(hustle.is_open()).toBe(false);
+		done();
+	});
+});
+
+describe('Hustle promise API (subset)', function() {
+	var hustle	=	new Hustle({
+		tubes: ['incoming', 'outgoing'],
+	});
+	hustle.promisify();
+
+	beforeEach(function(done) {
+		setTimeout(function() {
+			done();
+		}, 1000);
+	});
+
+	it('can clear a database', function(done) {
+		var res	=	hustle.wipe();
+		expect(res).toBe(true);
+		done();
+	});
+
+	it('can open a database', function(done) {
+		var db	=	null;
+		var finished	=	function()
+		{
+			expect(db instanceof IDBDatabase).toBe(true);
+			expect(hustle.is_open()).toBe(true);
+			done();
+		};
+		hustle.open().then(function(e) {
+			db	=	e.target.result;
+			finished();
+		}).catch(function(e) {
+			console.error('err: ', e);
+			finished();
+		});
+	});
+
+	it('can add queue items', function(done) {
+		var errors			=	[];
+		var items			=	[];
+		var num_messages	=	2;
+		var num_finished	=	0;
+
+		var finish	=	function()
+		{
+			num_finished++;
+			if(num_finished < num_messages) return;
+			expect(items[0]).toBe('get this?');
+			expect(items[1]).toBe('oh hai.');
+			done();
+		};
+
+		var success	=	function(item)
+		{
+			items.push(item.data);
+			finish();
+		};
+		var error	=	function(e)
+		{
+			errors.push(e);
+			console.error('err: ', e);
+			finish();
+		};
+		hustle.Queue.put('get this?', {tube: 'outgoing'}).then(success).catch(error);
+		hustle.Queue.put('oh hai.', {tube: 'outgoing'}).then(success).catch(error);
+	});
+
+	it('can count ready items in a tube', function(done) {
+		var error	=	null;
+		var number	=	0;
+		var finish	=	function()
+		{
+			expect(number).toBe(2);
+			expect(error).toBe(null);
+			done();
+		};
+		hustle.Queue.count_ready('outgoing').then(function(num) {
+			number	=	num;
+			finish();
+		}).catch(function(e) {
+			error	=	e;
+			finish();
+		})
+	});
+
+	it('can reserve (and delete) queue items', function(done) {
+		var errors			=	[];
+		var items			=	[];
+		var num_messages	=	2;
+		var num_finished	=	0;
+
+		var finish	=	function()
+		{
+			num_finished++;
+			if(num_finished < num_messages) return;
+			expect(items[0]).toBe('get this?');
+			expect(items[1]).toBe('oh hai.');
+			done();
+		};
+
+		var error	=	function(e)
+		{
+			errors.push(e);
+			console.error('err: ', e);
+			finish();
+		};
+		var dsuccess	=	function()
+		{
+			finish();
+		};
+
+		var success	=	function(item)
+		{
+			items.push(item.data);
+			hustle.Queue.delete(item.id).then(dsuccess).catch(error);
+		};
+		hustle.Queue.reserve({tube: 'outgoing'}).then(success).catch(error);
+		hustle.Queue.reserve({tube: 'outgoing'}).then(success).catch(error);
+	});
+
+	it('can publish/subscribe', function(done) {
+		var message	=	null;
+		var send	=	'you\'re loitering too, man. that\'s right you\'re loitering too.';
+		var error	=	null;
+		var sub		=	null;
+		var finish	=	function()
+		{
+			expect(message).toBe(send);
+			expect(error).toBe(null);
+			expect(sub.stop()).toBe(true);
+			done();
+		};
+
+		sub	=	new hustle.Pubsub.Subscriber('gabbagabbahey', function(msg) {
+			message	=	msg.data;
+			finish();
+		}, {error: function(e) { error = e; finish(); }});
+
+		hustle.Pubsub.publish('gabbagabbahey', send).then(function(msg) {
+		}).catch(function(e) {
+			error	=	e;
+		});
+
 	});
 
 	it('can close a database', function(done) {
