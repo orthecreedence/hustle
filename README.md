@@ -18,6 +18,7 @@ about losing your jobs/messages between app restarts.
 - [Getting started](#getting-started)
 - [API](#api)
 - [Promises](#promises)
+- [Exceptions](#Exceptions)
 - [Tests](#tests)
 - [License](#license)
 
@@ -549,6 +550,31 @@ on instantiation, so you'll only need to call `consumer.start()` after calling
 `consumer.stop()`.
 - `consumer.stop()` stops the consumer from listening to the channel. Can be
 started again with `consumer.start()`
+
+Exceptions
+----------
+This details some of the exceptions that can be thrown by Hustle.
+
+### HustleDBClosed
+Thrown when you try to do any operations in Hustle and the database is closed.
+Make sure you [open](#hustlequeueopen) it first!
+
+### HustleDBOpened
+Thrown when you try to open the DB and it's already opened through the current
+Hustle object.
+
+### HustleBadTube
+Thrown when you try to access a tube that doesn't exist. Be sure to declare your
+tubes when [instantiating Hustle](#hustle-class) *and* bump up the `db_version`
+property.  
+
+### HustleBadID
+Thrown when a bad ID value (like `null`) is passed to a function that takes an
+ID (like [peek](#hustlequeuepeek), [delete](#hustlequeuedelete), etc).
+
+### HustleNotFound
+Thrown when an operation is performed on an item that doesn't exist (or isn't in
+the location it's supposed to be in).
 
 Promises
 --------
