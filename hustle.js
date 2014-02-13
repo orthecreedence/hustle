@@ -40,7 +40,7 @@
 		var db_version			=	qoptions.db_version ? qoptions.db_version : 1;
 
 		// how often we check for stale pubsub messages
-		var housekeeping_delay	=	qoptions.housekeeping_delay ? qoptions.housekeeping_delay : 1000;
+		var maintenance_delay	=	qoptions.maintenance_delay ? qoptions.maintenance_delay : 1000;
 
 		// how long pubsub messages live
 		var msg_lifetime		=	qoptions.message_lifetime ? qoptions.message_lifetime : 10000;
@@ -52,6 +52,7 @@
 		var tbl		=	{
 			ids: '_ids',
 			reserved: '_reserved',
+			delayed: '_delayed',
 			buried: '_buried',
 			pubsub: '_pubsub'
 		};
@@ -71,46 +72,8 @@
 			return true;
 		};
 
-		/**
-		 * this function does database cleanup. only runs while db is open.
-		 */
-		var start_housekeeping	=	function()
-		{
-			/**
-			 * remove old messages
-			 */
-			var cleanup_messages	=	function(options)
-			{
-				if(!db) return false;
-
-				options || (options = {});
-
-				var trx			=	db.transaction(tbl.pubsub, 'readwrite');
-				trx.oncomplete	=	function(e) { if(options.success) options.success(e); };
-				trx.onerror		=	function(e) { if(options.error) options.error(e); }
-
-				var store	=	trx.objectStore(tbl.pubsub);
-				var index	=	store.index('created');
-				var bound	=	new Date().getTime() - msg_lifetime;
-				var range	=	IDBKeyRange.upperBound(bound);
-				index.openCursor(range).onsuccess	=	function(e)
-				{
-					var cursor	=	e.target.result;
-					if(cursor)
-					{
-						store.delete(cursor.value.id);
-						cursor.continue();
-					}
-				}
-			};
-
-			var do_cleanup	=	function()
-			{
-				cleanup_messages();
-				setTimeout(do_cleanup, housekeeping_delay);
-			};
-			setTimeout(do_cleanup, housekeeping_delay);
-		};
+		// will be filled in later
+		var do_maintenance;
 
 		/**
 		 * helper function, creates a table if it doesn't exist, otherwise grabs
@@ -174,7 +137,7 @@
 			{
 				db	=	req.result;
 				if(options.success) options.success(e);
-				start_housekeeping();
+				do_maintenance();
 			};
 
 			req.onupgradeneeded	=	function(e)
@@ -182,8 +145,13 @@
 				var store		=	null;
 				var tubes		=	qoptions.tubes;
 
-				update_table_schema(e, tbl.ids, { autoincrement: true });
-				update_table_schema(e, tbl.reserved);
+				update_table_schema(e, tbl.ids);
+				update_table_schema(e, tbl.reserved, {
+					indexes: { expire: { index: 'expire', unique: false } }
+				});
+				update_table_schema(e, tbl.delayed, {
+					indexes: { activate: { index: 'activate', unique: false } }
+				});
 				update_table_schema(e, tbl.buried, {
 					indexes: { id: { unique: false } }
 				});
@@ -234,6 +202,7 @@
 			check_db();
 			options || (options = {});
 
+
 			var id	=	null;
 
 			var trx		=	db.transaction([tbl.ids], 'readwrite');
@@ -252,13 +221,22 @@
 				if(options.error) options.error(e);
 			}
 			// add a dummy object, grab its id, then delete it.
-			// TODO: is this the best way?
-			var store	=	trx.objectStore(tbl.ids);
-			var req		=	store.add({counter: true});
+			var store		=	trx.objectStore(tbl.ids);
+			var req			=	store.get('id');
 			req.onsuccess	=	function(e)
 			{
-				id	=	e.target.result;
-				store.delete(id);
+				var item	=	req.result;
+				if(!item)
+				{
+					id	=	1;
+					store.put({id: 'id', value: 1});
+				}
+				else
+				{
+					item.value++;
+					id	=	item.value;
+					store.put(item);
+				}
 			};
 		};
 
@@ -318,14 +296,14 @@
 		 * wrapper to create a new queue item for storage in the DB
 		 *
 		 * valid option values are 'priority'
-		 * TODO: 'ttr', 'delay'
 		 */
 		var create_queue_item	=	function(data, options)
 		{
 			var item	=	{data: data};
-			// TODO: ttr, delay
 			var fields	=	[
-				{name: 'priority', type: 'int', default: 1024}
+				{name: 'priority', type: 'int', default: 1024},
+				{name: 'delay', type: 'int', default: 0},
+				{name: 'ttr', type: 'int', default: 0}
 			];
 
 			// loop over our fields, making sure they are the correct type and
@@ -382,7 +360,7 @@
 
 			var item	=	null;
 
-			var tables		=	[tbl.reserved, tbl.buried].concat(qoptions.tubes);
+			var tables		=	[tbl.reserved, tbl.delayed, tbl.buried].concat(qoptions.tubes);
 			var trx			=	db.transaction(tables, 'readonly');
 			trx.oncomplete	=	function(e)
 			{
@@ -444,6 +422,14 @@
 			if(qoptions.tubes.indexOf(tube) < 0) throw new HustleBadTube('tube '+ tube +' doesn\'t exist');
 
 			var item	=	create_queue_item(data, options);
+			if(item.delay && item.delay > 0)
+			{
+				item.tube		=	tube;
+				item.activate	=	new Date().getTime() + (1000 * item.delay);
+				tube			=	tbl.delayed;
+				delete item.delayed;
+			}
+
 			// grab a unique ID for this item
 			new_id({
 				success: function(id) {
@@ -491,6 +477,10 @@
 				item		=	citem;
 				item.reserves++;
 				item.tube	=	tube;
+				if(item.ttr > 0)
+				{
+					item.expire	=	new Date().getTime() + (1000 * item.ttr);
+				}
 				var store	=	trx.objectStore(tbl.reserved);
 				var req		=	store.add(item);
 				req.onsuccess	=	success;
@@ -842,7 +832,7 @@
 			var do_stop			=	false;
 			var seen_messages	=	{};
 
-			var housekeeping	=	function()
+			var maintenance	=	function()
 			{
 				// clean up seen_messages keys
 				var keys	=	Object.keys(seen_messages);
@@ -859,7 +849,7 @@
 
 				if(do_stop || !db) return;
 
-				housekeeping();
+				maintenance();
 
 				var item	=	null;
 
@@ -915,6 +905,140 @@
 			this.stop	=	stop;
 
 			return this;
+		};
+
+		// ---------------------------------------------------------------------
+		// maintenance/cleanup
+		// ---------------------------------------------------------------------
+
+		/**
+		 * remove old messages
+		 */
+		var cleanup_messages	=	function(options)
+		{
+			options || (options = {});
+
+			var trx			=	db.transaction(tbl.pubsub, 'readwrite');
+			trx.oncomplete	=	function(e) { if(options.success) options.success(e); };
+			trx.onerror		=	function(e) { if(options.error) options.error(e); }
+
+			var store	=	trx.objectStore(tbl.pubsub);
+			var index	=	store.index('created');
+			var bound	=	new Date().getTime() - msg_lifetime;
+			var range	=	IDBKeyRange.upperBound(bound);
+			index.openCursor(range).onsuccess	=	function(e)
+			{
+				var cursor	=	e.target.result;
+				if(cursor)
+				{
+					store.delete(cursor.value.id);
+					cursor.continue();
+				}
+			}
+		};
+
+		/**
+		 * move jobs in the delayed state into their respective tubes
+		 */
+		var move_delayed_jobs_to_ready	=	function(options)
+		{
+			options || (options = {});
+
+			var move_items	=	[];
+
+			var trx			=	db.transaction(tbl.delayed, 'readonly');
+			trx.oncomplete	=	function(e)
+			{
+				move_items.forEach(function(item) {
+					move_item(item.id, tbl.delayed, item.tube, {
+						error: function(e) {
+							console.error('Hustle: delayed move: ', e);
+						}
+					});
+				});
+			};
+			trx.onerror		=	function(e)
+			{
+				console.error('Hustle: delayed move: ', e);
+				if(options.error) options.error(e);
+			}
+
+			var store	=	trx.objectStore(tbl.delayed);
+			var index	=	store.index('activate');
+			var bound	=	new Date().getTime();
+			var range	=	IDBKeyRange.upperBound(bound);
+			index.openCursor(range).onsuccess	=	function(e)
+			{
+				var cursor	=	e.target.result;
+				if(cursor)
+				{
+					move_items.push(cursor.value);
+					cursor.continue();
+				}
+			}
+		};
+
+		/**
+		 * move expired jobs to their ready tube
+		 */
+		var move_expired_jobs_to_ready	=	function(options)
+		{
+			options || (options = {});
+
+			var move_items	=	[];
+
+			var trx			=	db.transaction(tbl.reserved, 'readonly');
+			trx.oncomplete	=	function(e)
+			{
+				move_items.forEach(function(item) {
+					move_item(item.id, tbl.reserved, item.tube, {
+						transform: function(item) {
+							delete item.expire;
+							return item;
+						},
+						error: function(e) {
+							console.error('Hustle: ttr move: ', e);
+						}
+					});
+				});
+			};
+			trx.onerror		=	function(e)
+			{
+				console.error('Hustle: ttr move: ', e);
+				if(options.error) options.error(e);
+			}
+
+			var store	=	trx.objectStore(tbl.reserved);
+			var index	=	store.index('expire');
+			var bound	=	new Date().getTime();
+			var range	=	IDBKeyRange.upperBound(bound);
+			index.openCursor(range).onsuccess	=	function(e)
+			{
+				var cursor	=	e.target.result;
+				if(cursor)
+				{
+					move_items.push(cursor.value);
+					cursor.continue();
+				}
+			}
+		};
+
+		/**
+		 * this function does database cleanup. only runs while db is open.
+		 */
+		do_maintenance	=	function()
+		{
+			var run_maintenance	=	function()
+			{
+				if(!db) return false;
+
+				cleanup_messages();
+				move_delayed_jobs_to_ready();
+				move_expired_jobs_to_ready();
+
+				setTimeout(run_maintenance, maintenance_delay);
+			};
+			setTimeout(run_maintenance, maintenance_delay);
 		};
 
 		// ---------------------------------------------------------------------

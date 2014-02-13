@@ -35,12 +35,6 @@ describe('Hustle queue operations', function() {
 		priority: null
 	};
 
-	beforeEach(function(done) {
-		setTimeout(function() {
-			done();
-		}, 1000);
-	});
-
 	it('can clear a database', function(done) {
 		var res	=	hustle.wipe();
 		expect(res).toBe(true);
@@ -415,14 +409,138 @@ describe('Hustle queue operations', function() {
 	});
 });
 
+describe('Hustle queue delayed/ttr operations', function() {
+	var hustle	=	new Hustle({
+		tubes: ['incoming', 'outgoing'],
+	});
+
+	it('can clear a database', function(done) {
+		var res	=	hustle.wipe();
+		expect(res).toBe(true);
+		done();
+	});
+
+	it('can open a database', function(done) {
+		var db	=	null;
+		var finished	=	function()
+		{
+			expect(db instanceof IDBDatabase).toBe(true);
+			expect(hustle.is_open()).toBe(true);
+			done();
+		};
+		hustle.open({
+			success: function(e) {
+				db	=	e.target.result;
+				finished();
+			},
+			error: function(e) {
+				console.error('err: ', e);
+				finished();
+			}
+		});
+	});
+
+	it('will delay making a queue item ready', function(done) {
+		var item1	=	null;
+		var item2	=	null;
+		var count	=	0;
+		var msg		=	'yes, delayed';
+		var errors	=	[];
+		var finish	=	function()
+		{
+			count++;
+			if(count < 2) return false;
+
+			expect(item1).toBe(null);
+			expect(item2 && item2.data).toBe(msg);
+			expect(errors.length).toBe(0);
+			done();
+		};
+
+		var error	=	function(e)
+		{
+			errors.push(e);
+			console.error('err: ', e);
+			finish();
+		};
+
+		var do_reserve	=	function(is_first)
+		{
+			hustle.Queue.reserve({
+				success: function(item) {
+					if(is_first) item1 = item;
+					else item2 = item;
+					finish();
+				},
+				error: error
+			});
+		};
+
+		hustle.Queue.put(msg, {
+			delay: 2,
+			success: function(item) {
+				do_reserve(true);
+				setTimeout( function() { do_reserve(false); }, 3000 );
+			},
+			error: error
+		});
+	});
+
+	it('will move an expired job back to the ready state', function(done) {
+		var errors	=	[];
+		var item_id	=	null;
+		var state	=	null;
+		var finish	=	function()
+		{
+			expect(errors.length).toBe(0);
+			expect(item_id).not.toBe(null);
+			expect(state).toBe('ready');
+			done();
+		};
+
+		var error	=	function(e)
+		{
+			errors.push(e);
+			console.error('err: ', e);
+			finish();
+		};
+
+		var do_peek	=	function()
+		{
+			hustle.Queue.peek(item_id, {
+				success: function(item) {
+					state	=	item.state;
+					finish();
+				},
+				error: error
+			});
+		};
+
+		hustle.Queue.put({test: true}, {
+			ttr: 1,
+			success: function(item) {
+				item_id	=	item.id;
+				hustle.Queue.reserve({
+					success: function() {
+						setTimeout( do_peek, 2000 );
+					},
+					error: error
+				});
+			},
+			error: error
+		});
+	});
+
+	it('can close a database', function(done) {
+		var res	=	hustle.close();
+		expect(res).toBe(true);
+		expect(hustle.is_open()).toBe(false);
+		done();
+	});
+});
+
 describe('Hustle pubsub operations', function() {
 	var hustle	=	new Hustle();
-
-	beforeEach(function(done) {
-		setTimeout(function() {
-			done();
-		}, 1000);
-	});
 
 	it('can clear a database (yes, again)', function(done) {
 		var res	=	hustle.wipe();
@@ -581,12 +699,6 @@ describe('Hustle promise API (subset)', function() {
 		tubes: ['incoming', 'outgoing'],
 	});
 	hustle.promisify();
-
-	beforeEach(function(done) {
-		setTimeout(function() {
-			done();
-		}, 1000);
-	});
 
 	it('can clear a database', function(done) {
 		var res	=	hustle.wipe();
