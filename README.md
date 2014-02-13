@@ -313,6 +313,8 @@ set appropriately.
 hustle.Queue.put(job_data, {
     tube: 'default',
     priority: 1024,
+    delay: 1000,
+    ttr: 20,
     success: function(item) { ... },
     error: function(e) { ... }
 });
@@ -322,7 +324,12 @@ Puts a new item into the queue.
 
 - `tube` specifies the tube we're putting this item into. Defaults to "default".
 - `priority` specifies this item's priority. `0` is the most important, with
-anything higher getting less important. Defaults to `1024`.
+anything higher getting less important. Defaults: `1024`
+- `delay` is how many seconds to wait before the job becomes ready. Default: `0`
+- `ttr` is how many seconds the job has to live once reserved. If this many
+seconds passes before the job is [deleted](#hustlequeuedelete) or [released](#hustlequeuerelease),
+the job is automatically put back into the ready state. Set to `0` to disable
+the ttr. Default: `0`
 - `success` is fired when the job has been added to the queue. The first
 argument is the full item that was passed back (which is in the [standard format](#queue-item-format)).
 You may want to make note of the item's ID (`item.id`) because this will allow
