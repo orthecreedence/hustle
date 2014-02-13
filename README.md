@@ -557,7 +557,7 @@ This details some of the exceptions that can be thrown by Hustle.
 
 ### HustleDBClosed
 Thrown when you try to do any operations in Hustle and the database is closed.
-Make sure you [open](#hustlequeueopen) it first!
+Make sure you [open](#hustleopen) it first!
 
 ### HustleDBOpened
 Thrown when you try to open the DB and it's already opened through the current
