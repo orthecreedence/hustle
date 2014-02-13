@@ -15,19 +15,20 @@ server somewhere: you can queue up changes to your local data and have them
 synced to your API when a connection becomes available without having to worry
 about losing your jobs/messages between app restarts.
 
-Everything in Hustle is asynchronous so until enough people bug me to implement
-futures or promises or deferreds or whatever the hell they're called this week,
-you're stuck in callback hell.
-
 - [Getting started](#getting-started)
 - [API](#api)
+- [Promises](#promises)
+- [Exceptions](#exceptions)
 - [Tests](#tests)
 - [License](#license)
 
 Getting started
 ---------------
 ```javascript
-var hustle   =   new Hustle({ tubes: ['jobs'] });
+var hustle   =   new Hustle({
+    tubes: ['jobs'],
+    db_version: 2       // should increase whenever tubes change
+});
 ```
 
 Create our Hustle object. This provides the interface for all our messaging and
@@ -157,6 +158,7 @@ API
   - [Hustle.Queue.bury](#hustlequeuebury)
   - [Hustle.Queue.kick](#hustlequeuekick)
   - [Hustle.Queue.kick\_job](#hustlequeuekick_job)
+  - [Hustle.Queue.touch](#hustlequeuetouch)
   - [Hustle.Queue.count\_ready](#hustlequeuecount_ready)
   - [Hustle.Queue.Consumer](#hustlequeueconsumer)
 - [Hustle.Pubsub](#hustlepubsub)
@@ -168,15 +170,25 @@ API
 ```javascript
 var hustle   =   new Hustle({
     db_name: 'hustle',
-    tubes: ['tube1', 'tube2', ...]
+    db_version: 1,
+    housekeeping_delay: 1000,
+    message_lifetime: 10000,
+    tubes: ['default']
 });
 ```
 Creates a Hustle object. Note that the tubes the queue uses *must* be specified.
 You cannot use queue tubes that haven't been declared.
 
-- `db_name` specifies the name we want to open the Hustle queue onto. Defaults
-to "hustle".
+- `db_name` specifies the name we want to open the Hustle queue onto. Default:
+`"hustle"`
+- `db_version` is the IndexedDB version number to open the database under. This
+should change whenever your tubes change *or else* (or else what? or else they
+will probably not be updated in the schema). Default: `1`
+- `housekeeping_delay` is a value (in ms) that determines how often this Hustle
+object will remove old pubsub messages. Default: `1000`
+- `message_lifetime` is how long messages live in the database. Default: `10000`
 - `tubes` specifies what tubes we want to be present on [open](#hustleopen).
+Default: `['default']`
 
 Once instantiated, the hustle object has two namespaces: [Queue](#hustlequeue)
 and [Pubsub](#hustlepubsub).
@@ -204,11 +216,15 @@ hustle.close()
 Closes the Hustle database. Returns `true` if the DB was closed, otherwise
 returns `false` (if the DB wasn't open).
 
+This function is synchronous.
+
 ### Hustle.is\_open
 ```javascript
 hustle.is_open()
   => boolean
 ```
+
+This function is synchronous.
 
 ### Hustle.wipe
 ```javascript
@@ -219,6 +235,8 @@ Closes the Hustle database and obliterates it. Very useful for debugging apps
 *or* if you have no interest in actually persisting, you can call `wipe()` each
 time your app loads just before you call [open](#hustleopen).
 
+This function is synchronous.
+
 ### Hustle.Queue
 The Hustle queue system allows jobs to be atomically grabbed and operated on
 by any number of workers. Each job can only be reserved by one worker at a time.
@@ -226,28 +244,47 @@ by any number of workers. Each job can only be reserved by one worker at a time.
 Hustle.Queue takes heavy inspiration from [beanstalkd](http://kr.github.io/beanstalkd/),
 in fact most functions have the same names as the [beanstalkd protocol](https://github.com/kr/beanstalkd/blob/master/doc/protocol.txt).
 
-It's important to note that currently, delayed jobs and time-to-run (`ttr`) are
-not implemented.
-
 #### Queue item format
 All items added to the Hustle queue follow this basic format:
 ```javascript
 {
-    id: 6969,               // the item's Hustle-assigned unique id
-    priority: 1024,         // the item's priority (lower is more important, defaults to 1024)
-    data: { ... },          // the item's user-specified data payload
-    age: 0,                 // how old the item is (unimplemented)
-    reserves: 0,            // how many times this item has been reserved
-    releases: 0,            // how many times this item has been released
-    timeouts: 0,            // how many times this item has timed out (unimplemented)
-    buries: 0,              // how many times this item has been buried
-    kicks: 0,               // how many times this item has been kicked
-    created: 1391835692616  // when this item was created (new Date().getTime())
+    // the item's Hustle-assigned unique id
+    id: 6969,
+
+    // the item's priority (lower is more important, defaults to 1024)
+    priority: 1024,
+
+    // the item's user-specified data payload
+    data: ...,
+
+    // how old the item is
+    age: 0,
+
+    // how many times this item has been reserved
+    reserves: 0,
+
+    // how many times this item has been released
+    releases: 0,
+
+    // how many times this item has timed out
+    timeouts: 0,
+
+    // how many times this item has been buried
+    buries: 0,
+
+    // how many times this item has been kicked
+    kicks: 0,
+
+    // how many seconds left this job has to run before expiring (and being moved to the ready state)
+    time_left: 0,
+
+    // what state this item is in (set by peek)
+    state: 'ready|buried|reserved',
+
+    // when this item was created (new Date().getTime())
+    created: 1391835692616
 }
 ```
-
-Note that `timeouts` is unimplemented because `ttr` is not currently implemented
-in the Hustle lib.
 
 #### Hustle.Queue.peek
 ```javascript
@@ -276,6 +313,8 @@ set appropriately.
 hustle.Queue.put(job_data, {
     tube: 'default',
     priority: 1024,
+    delay: 1000,
+    ttr: 20,
     success: function(item) { ... },
     error: function(e) { ... }
 });
@@ -285,7 +324,13 @@ Puts a new item into the queue.
 
 - `tube` specifies the tube we're putting this item into. Defaults to "default".
 - `priority` specifies this item's priority. `0` is the most important, with
-anything higher getting less important. Defaults to `1024`.
+anything higher getting less important. Defaults: `1024`
+- `delay` is how many seconds to wait before the job becomes ready. Default: `0`
+- `ttr` is how many seconds the job has to live once reserved. If this many
+seconds passes before the job is [deleted](#hustlequeuedelete) or [released](#hustlequeuerelease),
+the job is automatically put back into the ready state. Note that you can reset
+the ttr timer using the [touch](#hustlequeuetouch) command. Set to `0` to
+disable the ttr. Default: `0`
 - `success` is fired when the job has been added to the queue. The first
 argument is the full item that was passed back (which is in the [standard format](#queue-item-format)).
 You may want to make note of the item's ID (`item.id`) because this will allow
@@ -410,6 +455,21 @@ Kicks a specific item by id, as opposed to kicking the first N items (like
 - `success` is fired when the operation completes.
 - `error` is fired if something goes wrong while kicking.
 
+#### Hustle.Queue.touch
+```javascript
+hustle.Queue.touch(id, {
+    success: function() { ... },
+    error: function(e) { ... }
+});
+```
+
+Reset an item's time to run value (ie reset the timer that moves it to the ready
+state if it isn't released/deleted within a certain amount of time).
+
+- `id` specifies the ID of the item we're resetting the timer for.
+- `success` is fired when finished.
+- `error` is fired when something goes wrong.
+
 #### Hustle.Queue.count\_ready
 ```javascript
 hustle.Queue.count_ready(tube, {
@@ -465,9 +525,14 @@ arbitrary channels. Unlike the [queue](#hustlequeue), a message will be seen by
 All items added to the Hustle queue follow this basic format:
 ```javascript
 {
-    id: 6969,               // the item's Hustle-assigned unique id
-    data: { ... },          // the item's user-specified message payload
-    created: 1391835692616  // when this item was created (new Date().getTime())
+    // the item's Hustle-assigned unique id
+    id: 6969,
+
+    // the item's user-specified message payload
+    data: ...,
+
+    // when this item was created (new Date().getTime())
+    created: 1391835692616
 }
 ```
 
@@ -517,12 +582,71 @@ on instantiation, so you'll only need to call `consumer.start()` after calling
 - `consumer.stop()` stops the consumer from listening to the channel. Can be
 started again with `consumer.start()`
 
+Exceptions
+----------
+This details some of the exceptions that can be thrown by Hustle.
+
+### HustleDBClosed
+Thrown when you try to do any operations in Hustle and the database is closed.
+Make sure you [open](#hustleopen) it first!
+
+### HustleDBOpened
+Thrown when you try to open the DB and it's already opened through the current
+Hustle object.
+
+### HustleBadTube
+Thrown when you try to access a tube that doesn't exist. Be sure to declare your
+tubes when [instantiating Hustle](#hustle-class) *and* bump up the `db_version`
+property.  
+
+### HustleBadID
+Thrown when a bad ID value (like `null`) is passed to a function that takes an
+ID (like [peek](#hustlequeuepeek), [delete](#hustlequeuedelete), etc).
+
+### HustleNotFound
+Thrown when an operation is performed on an item that doesn't exist (or isn't in
+the location it's supposed to be in).
+
+Promises
+--------
+Hustle allows using [bluebird](https://github.com/petkaantonov/bluebird) for a
+promise API.
+
+The promise API is activated by calling `hustle.promisify()`:
+
+```javascript
+var hustle = new Hustle();
+hustle.promisify();
+```
+
+This replaces *all* public API functions that take `success`/`error` options
+(any non-synchronous function) to return a promise object instead.
+
+### Examples
+
+```javascript
+var hustle = new Hustle();
+hustle.open().then(function() {
+    return hustle.Queue.put('fetch me my slippers');
+}).then(function() {
+    return hustle.Queue.reserve();
+}).then(function(item) {
+    console.log("WHAT?? I don't take order from you...");
+    return hustle.Queue.delete(item.id)
+}).catch(function(e) {
+    console.error('something went wrong: ', e);
+});
+```
+
+Notice how we can chain a number of calls at the top level and have only one
+error handler for the lot. Very nice.
+
 Tests
 -----
-Just navigate ur browser to `Hustle/test/` and let the magic happen.
+Just navigate ur browser to `Hustle/test/` and let the *magic happen*.
 
 License
 -------
-MIT. __YAY.__
+MIT. __JOY.__
 
 

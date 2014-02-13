@@ -2,7 +2,7 @@ describe('Hustle', function() {
 	var hustle	=	new Hustle();
 
 	it('has known exported functions', function() {
-		var main_exports	=	['open', 'close', 'is_open', 'wipe'];
+		var main_exports	=	['open', 'close', 'is_open', 'wipe', 'promisify'];
 		var queue_exports	=	['peek', 'put', 'reserve', 'delete', 'release', 'bury', 'kick', 'kick_job', 'count_ready', 'Consumer']; 
 		var pubsub_exports	=	['publish', 'Subscriber']; 
 		for(var i = 0; i < main_exports.length; i++)
@@ -34,12 +34,6 @@ describe('Hustle queue operations', function() {
 		first: null,
 		priority: null
 	};
-
-	beforeEach(function(done) {
-		setTimeout(function() {
-			done();
-		}, 1000);
-	});
 
 	it('can clear a database', function(done) {
 		var res	=	hustle.wipe();
@@ -415,13 +409,197 @@ describe('Hustle queue operations', function() {
 	});
 });
 
+describe('Hustle queue delayed/ttr operations', function() {
+	var hustle	=	new Hustle({
+		tubes: ['incoming', 'outgoing'],
+	});
+
+	it('can clear a database', function(done) {
+		var res	=	hustle.wipe();
+		expect(res).toBe(true);
+		done();
+	});
+
+	it('can open a database', function(done) {
+		var db	=	null;
+		var finished	=	function()
+		{
+			expect(db instanceof IDBDatabase).toBe(true);
+			expect(hustle.is_open()).toBe(true);
+			done();
+		};
+		hustle.open({
+			success: function(e) {
+				db	=	e.target.result;
+				finished();
+			},
+			error: function(e) {
+				console.error('err: ', e);
+				finished();
+			}
+		});
+	});
+
+	it('will delay making a queue item ready', function(done) {
+		var item1	=	null;
+		var item2	=	null;
+		var count	=	0;
+		var msg		=	'yes, delayed';
+		var errors	=	[];
+		var finish	=	function()
+		{
+			count++;
+			if(count < 2) return false;
+
+			expect(item1).toBe(null);
+			expect(item2 && item2.data).toBe(msg);
+			expect(errors.length).toBe(0);
+			done();
+		};
+
+		var error	=	function(e)
+		{
+			errors.push(e);
+			console.error('err: ', e);
+			finish();
+		};
+
+		var do_reserve	=	function(is_first)
+		{
+			hustle.Queue.reserve({
+				success: function(item) {
+					if(is_first) item1 = item;
+					else item2 = item;
+					finish();
+				},
+				error: error
+			});
+		};
+
+		hustle.Queue.put(msg, {
+			delay: 2,
+			success: function(item) {
+				do_reserve(true);
+				setTimeout( function() { do_reserve(false); }, 3000 );
+			},
+			error: error
+		});
+	});
+
+	it('will move an expired job back to the ready state', function(done) {
+		var errors	=	[];
+		var item_id	=	null;
+		var state	=	null;
+		var finish	=	function()
+		{
+			expect(errors.length).toBe(0);
+			expect(item_id).not.toBe(null);
+			expect(state).toBe('ready');
+			done();
+		};
+
+		var error	=	function(e)
+		{
+			errors.push(e);
+			console.error('err: ', e);
+			finish();
+		};
+
+		var do_peek	=	function()
+		{
+			hustle.Queue.peek(item_id, {
+				success: function(item) {
+					state	=	item.state;
+					finish();
+					hustle.Queue.delete(item_id);
+				},
+				error: error
+			});
+		};
+
+		hustle.Queue.put({test: true}, {
+			ttr: 1,
+			success: function(item) {
+				item_id	=	item.id;
+				hustle.Queue.reserve({
+					success: function() {
+						setTimeout( do_peek, 2000 );
+					},
+					error: error
+				});
+			},
+			error: error
+		});
+	});
+
+	it('will reset ttr for touched items', function(done) {
+		var errors	=	[];
+		var item_id	=	null;
+		var state	=	null;
+		var finish	=	function()
+		{
+			expect(errors.length).toBe(0);
+			expect(item_id).not.toBe(null);
+			expect(state).toBe('reserved');
+			done();
+		};
+
+		var error	=	function(e)
+		{
+			errors.push(e);
+			console.error('err: ', e);
+			finish();
+		};
+
+		var do_peek	=	function()
+		{
+			hustle.Queue.peek(item_id, {
+				success: function(item) {
+					state	=	item.state;
+					finish();
+				},
+				error: error
+			});
+		};
+
+		var do_touch	=	function()
+		{
+			hustle.Queue.touch(item_id, {
+				error: error
+			});
+		};
+
+		hustle.Queue.put({test: true}, {
+			ttr: 2,
+			success: function(item) {
+				item_id	=	item.id;
+				hustle.Queue.reserve({
+					success: function() {
+						setTimeout( do_touch, 1500 );
+						setTimeout( do_peek, 3000 );
+					},
+					error: error
+				});
+			},
+			error: error
+		});
+	});
+
+	it('can close a database', function(done) {
+		var res	=	hustle.close();
+		expect(res).toBe(true);
+		expect(hustle.is_open()).toBe(false);
+		done();
+	});
+});
+
 describe('Hustle pubsub operations', function() {
 	var hustle	=	new Hustle();
 
-	beforeEach(function(done) {
-		setTimeout(function() {
-			done();
-		}, 1000);
+	it('can clear a database (yes, again)', function(done) {
+		var res	=	hustle.wipe();
+		expect(res).toBe(true);
+		done();
 	});
 
 	it('can open a database (again)', function(done) {
@@ -560,6 +738,177 @@ describe('Hustle pubsub operations', function() {
 				});
 			})(i);
 		}
+	});
+
+	it('can close a database', function(done) {
+		var res	=	hustle.close();
+		expect(res).toBe(true);
+		expect(hustle.is_open()).toBe(false);
+		done();
+	});
+});
+
+describe('Hustle promise API (subset)', function() {
+	var hustle	=	new Hustle({
+		tubes: ['incoming', 'outgoing'],
+	});
+	hustle.promisify();
+
+	it('can clear a database', function(done) {
+		var res	=	hustle.wipe();
+		expect(res).toBe(true);
+		done();
+	});
+
+	it('can open a database', function(done) {
+		var db	=	null;
+		var finished	=	function()
+		{
+			expect(db instanceof IDBDatabase).toBe(true);
+			expect(hustle.is_open()).toBe(true);
+			done();
+		};
+		hustle.open().then(function(e) {
+			db	=	e.target.result;
+			finished();
+		}).catch(function(e) {
+			console.error('err: ', e);
+			finished();
+		});
+	});
+
+	it('can add queue items', function(done) {
+		var errors			=	[];
+		var items			=	[];
+		var num_messages	=	2;
+		var num_finished	=	0;
+
+		var finish	=	function()
+		{
+			num_finished++;
+			if(num_finished < num_messages) return;
+			expect(items[0]).toBe('get this?');
+			expect(items[1]).toBe('oh hai.');
+			done();
+		};
+
+		var success	=	function(item)
+		{
+			items.push(item.data);
+			finish();
+		};
+		var error	=	function(e)
+		{
+			errors.push(e);
+			console.error('err: ', e);
+			finish();
+		};
+		hustle.Queue.put('get this?', {tube: 'outgoing'}).then(success).catch(error);
+		hustle.Queue.put('oh hai.', {tube: 'outgoing'}).then(success).catch(error);
+	});
+
+	it('can count ready items in a tube', function(done) {
+		var error	=	null;
+		var number	=	0;
+		var finish	=	function()
+		{
+			expect(number).toBe(2);
+			expect(error).toBe(null);
+			done();
+		};
+		hustle.Queue.count_ready('outgoing').then(function(num) {
+			number	=	num;
+			finish();
+		}).catch(function(e) {
+			error	=	e;
+			finish();
+		})
+	});
+
+	it('can reserve (and delete) queue items', function(done) {
+		var errors			=	[];
+		var items			=	[];
+		var num_messages	=	2;
+		var num_finished	=	0;
+
+		var finish	=	function()
+		{
+			num_finished++;
+			if(num_finished < num_messages) return;
+			expect(items[0]).toBe('get this?');
+			expect(items[1]).toBe('oh hai.');
+			done();
+		};
+
+		var error	=	function(e)
+		{
+			errors.push(e);
+			console.error('err: ', e);
+			finish();
+		};
+		var dsuccess	=	function()
+		{
+			finish();
+		};
+
+		var success	=	function(item)
+		{
+			items.push(item.data);
+			hustle.Queue.delete(item.id).then(dsuccess).catch(error);
+		};
+		hustle.Queue.reserve({tube: 'outgoing'}).then(success).catch(error);
+		hustle.Queue.reserve({tube: 'outgoing'}).then(success).catch(error);
+	});
+
+	it('can publish/subscribe', function(done) {
+		var message	=	null;
+		var send	=	'you\'re loitering too, man. that\'s right you\'re loitering too.';
+		var error	=	null;
+		var sub		=	null;
+		var finish	=	function()
+		{
+			expect(message).toBe(send);
+			expect(error).toBe(null);
+			expect(sub.stop()).toBe(true);
+			done();
+		};
+
+		sub	=	new hustle.Pubsub.Subscriber('gabbagabbahey', function(msg) {
+			message	=	msg.data;
+			finish();
+		}, {error: function(e) { error = e; finish(); }});
+
+		hustle.Pubsub.publish('gabbagabbahey', send).then(function(msg) {
+		}).catch(function(e) {
+			error	=	e;
+		});
+
+	});
+
+	it('can chain calls', function(done) {
+		var error	=	null;
+		var send	=	'could i speak to the drug dealer of the house please?';
+		var message	=	null;
+
+		var finish	=	function()
+		{
+			expect(message).toBe(send);
+			expect(error).toBe(null);
+			done();
+		};
+
+		hustle.Queue.put(send, {tube: 'outgoing'}).then(function(item) {
+			return hustle.Queue.reserve({tube: 'outgoing'});
+		}).then(function(item) {
+			message	=	item.data;
+			return hustle.Queue.delete(item.id);
+		}).then(function() {
+			finish();
+		}).catch(function(e) {
+			error	=	e;
+			console.error('err: ', e);
+			finish();
+		});
 	});
 
 	it('can close a database', function(done) {
