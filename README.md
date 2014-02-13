@@ -328,8 +328,9 @@ anything higher getting less important. Defaults: `1024`
 - `delay` is how many seconds to wait before the job becomes ready. Default: `0`
 - `ttr` is how many seconds the job has to live once reserved. If this many
 seconds passes before the job is [deleted](#hustlequeuedelete) or [released](#hustlequeuerelease),
-the job is automatically put back into the ready state. Set to `0` to disable
-the ttr. Default: `0`
+the job is automatically put back into the ready state. Note that you can reset
+the ttr timer using the [touch](#hustlequeuetouch) command. Set to `0` to
+disable the ttr. Default: `0`
 - `success` is fired when the job has been added to the queue. The first
 argument is the full item that was passed back (which is in the [standard format](#queue-item-format)).
 You may want to make note of the item's ID (`item.id`) because this will allow
