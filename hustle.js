@@ -391,41 +391,38 @@
 			trx.onerror		=	function(e) { if(options.error) options.error(e); }
 
 			// scan all tables for this id
-			for(var i = 0; i < tables.length; i++)
-			{
-				(function(table) {
-					var req;
-					if(table == tbl.buried)
+			tables.forEach(function(table) {
+				var req;
+				if(table == tbl.buried)
+				{
+					var index	=	trx.objectStore(table).index('id');
+					req			=	index.get(id);
+				}
+				else
+				{
+					req	=	trx.objectStore(table).get(id);
+				}
+				req.onsuccess	=	function(e)
+				{
+					var res	=	e && e.target && e.target.result;
+					if(item || !res) return false;
+
+					item		=	res;
+					if(table == tbl.reserved)
 					{
-						var index	=	trx.objectStore(table).index('id');
-						req			=	index.get(id);
+						item.state	=	'reserved';
+					}
+					else if(table == tbl.buried)
+					{
+						item.state	=	'buried';
 					}
 					else
 					{
-						req	=	trx.objectStore(table).get(id);
+						item.state	=	'ready';
+						if(!item.tube) item.tube = table;
 					}
-					req.onsuccess	=	function(e)
-					{
-						var res	=	e && e.target && e.target.result;
-						if(item || !res) return false;
-
-						item		=	res;
-						if(table == tbl.reserved)
-						{
-							item.state	=	'reserved';
-						}
-						else if(table == tbl.buried)
-						{
-							item.state	=	'buried';
-						}
-						else
-						{
-							item.state	=	'ready';
-							if(!item.tube) item.tube = table;
-						}
-					}
-				})(tables[i]);
-			}
+				}
+			});
 		};
 
 		/**
@@ -845,11 +842,10 @@
 				// clean up seen_messages keys
 				var keys	=	Object.keys(seen_messages);
 				var curr	=	new Date().getTime();
-				for(var i = 0, n = keys.length; i < n; i++)
-				{
-					var time	=	seen_messages[keys[i]];
+				keys.forEach(function(key) {
+					var time	=	seen_messages[key];
 					if(time < (curr - (1000 + msg_lifetime))) delete seen_messages[keys[i]];
-				}
+				});
 			};
 
 			var poll	=	function(options)
