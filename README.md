@@ -158,6 +158,7 @@ API
   - [Hustle.Queue.bury](#hustlequeuebury)
   - [Hustle.Queue.kick](#hustlequeuekick)
   - [Hustle.Queue.kick\_job](#hustlequeuekick_job)
+  - [Hustle.Queue.touch](#hustlequeuetouch)
   - [Hustle.Queue.count\_ready](#hustlequeuecount_ready)
   - [Hustle.Queue.Consumer](#hustlequeueconsumer)
 - [Hustle.Pubsub](#hustlepubsub)
