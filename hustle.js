@@ -391,9 +391,14 @@
 					if(item || !res) return false;
 
 					item		=	res;
+					item.age	=	Math.round((new Date().getTime() - item.expire) / 1000);
 					if(table == tbl.reserved)
 					{
 						item.state	=	'reserved';
+						if(item.ttr > 0)
+						{
+							item.time_left	=	Math.round((item.expire - new Date().getTime()) / 1000);
+						}
 					}
 					else if(table == tbl.buried)
 					{
@@ -481,8 +486,8 @@
 				{
 					item.expire	=	new Date().getTime() + (1000 * item.ttr);
 				}
-				var store	=	trx.objectStore(tbl.reserved);
-				var req		=	store.add(item);
+				var store		=	trx.objectStore(tbl.reserved);
+				var req			=	store.add(item);
 				req.onsuccess	=	success;
 			};
 
@@ -699,13 +704,46 @@
 			});
 		};
 
-		/* TODO: implement this once ttr is implemented
+		/**
+		 * reset a job's ttr
+		 */
 		var touch	=	function(id, options)
 		{
 			check_db();
 			options || (options = {});
+
+			peek(id, {
+				not_found_error: true,
+				success: function(item) {
+					if(item.state != 'reserved')
+					{
+						console.log('item.state: ', item.state);
+						if(options.error) options.error(new HustleNotFound('item '+ id +' isn\'t reserved'));
+						return;
+					}
+
+					if(item.ttr <= 0)
+					{
+						if(options.success) options.success();
+						return;
+					}
+
+					var trx			=	db.transaction(tbl.reserved, 'readwrite');
+					trx.oncomplete	=	function(e) { if(options.success) options.success(e); };
+					trx.onerror		=	function(e) { if(options.error) options.error(e); }
+
+					var store		=	trx.objectStore(tbl.reserved);
+					var req			=	store.get(id);
+					req.onsuccess	=	function(e)
+					{
+						var item	=	req.result;
+						item.expire	=	new Date().getTime() + (item.ttr * 1000);
+						store.put(item);
+					};
+				},
+				error: options.error
+			});
 		};
-		*/
 
 		var count_ready	=	function(tube, options)
 		{
@@ -994,6 +1032,7 @@
 					move_item(item.id, tbl.reserved, item.tube, {
 						transform: function(item) {
 							delete item.expire;
+							item.timeouts++;
 							return item;
 						},
 						error: function(e) {
@@ -1053,6 +1092,7 @@
 			bury: bury,
 			kick: kick,
 			kick_job: kick_job,
+			touch: touch,
 			count_ready: count_ready,
 			Consumer: Consumer
 		};
@@ -1090,6 +1130,7 @@
 			this.Queue.bury			=	do_promisify(this.Queue.bury, 1);
 			this.Queue.kick			=	do_promisify(this.Queue.kick, 1);
 			this.Queue.kick_job		=	do_promisify(this.Queue.kick_job, 1);
+			this.Queue.touch		=	do_promisify(this.Queue.touch, 1);
 			this.Queue.count_ready	=	do_promisify(this.Queue.count_ready, 1);
 			this.Pubsub.publish		=	do_promisify(this.Pubsub.publish, 2);
 		}.bind(this);

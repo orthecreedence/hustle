@@ -511,6 +511,7 @@ describe('Hustle queue delayed/ttr operations', function() {
 				success: function(item) {
 					state	=	item.state;
 					finish();
+					hustle.Queue.delete(item_id);
 				},
 				error: error
 			});
@@ -523,6 +524,59 @@ describe('Hustle queue delayed/ttr operations', function() {
 				hustle.Queue.reserve({
 					success: function() {
 						setTimeout( do_peek, 2000 );
+					},
+					error: error
+				});
+			},
+			error: error
+		});
+	});
+
+	it('will reset ttr for touched items', function(done) {
+		var errors	=	[];
+		var item_id	=	null;
+		var state	=	null;
+		var finish	=	function()
+		{
+			expect(errors.length).toBe(0);
+			expect(item_id).not.toBe(null);
+			expect(state).toBe('reserved');
+			done();
+		};
+
+		var error	=	function(e)
+		{
+			errors.push(e);
+			console.error('err: ', e);
+			finish();
+		};
+
+		var do_peek	=	function()
+		{
+			hustle.Queue.peek(item_id, {
+				success: function(item) {
+					state	=	item.state;
+					finish();
+				},
+				error: error
+			});
+		};
+
+		var do_touch	=	function()
+		{
+			hustle.Queue.touch(item_id, {
+				error: error
+			});
+		};
+
+		hustle.Queue.put({test: true}, {
+			ttr: 2,
+			success: function(item) {
+				item_id	=	item.id;
+				hustle.Queue.reserve({
+					success: function() {
+						setTimeout( do_touch, 1500 );
+						setTimeout( do_peek, 3000 );
 					},
 					error: error
 				});

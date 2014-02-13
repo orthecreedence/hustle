@@ -243,9 +243,6 @@ by any number of workers. Each job can only be reserved by one worker at a time.
 Hustle.Queue takes heavy inspiration from [beanstalkd](http://kr.github.io/beanstalkd/),
 in fact most functions have the same names as the [beanstalkd protocol](https://github.com/kr/beanstalkd/blob/master/doc/protocol.txt).
 
-It's important to note that currently, delayed jobs and time-to-run (`ttr`) are
-not implemented.
-
 #### Queue item format
 All items added to the Hustle queue follow this basic format:
 ```javascript
@@ -259,7 +256,7 @@ All items added to the Hustle queue follow this basic format:
     // the item's user-specified data payload
     data: ...,
 
-    // how old the item is (unimplemented)
+    // how old the item is
     age: 0,
 
     // how many times this item has been reserved
@@ -268,7 +265,7 @@ All items added to the Hustle queue follow this basic format:
     // how many times this item has been released
     releases: 0,
 
-    // how many times this item has timed out (unimplemented)
+    // how many times this item has timed out
     timeouts: 0,
 
     // how many times this item has been buried
@@ -277,6 +274,9 @@ All items added to the Hustle queue follow this basic format:
     // how many times this item has been kicked
     kicks: 0,
 
+    // how many seconds left this job has to run before expiring (and being moved to the ready state)
+    time_left: 0,
+
     // what state this item is in (set by peek)
     state: 'ready|buried|reserved',
 
@@ -284,9 +284,6 @@ All items added to the Hustle queue follow this basic format:
     created: 1391835692616
 }
 ```
-
-Note that `timeouts` is unimplemented because `ttr` is not currently implemented
-in the Hustle lib.
 
 #### Hustle.Queue.peek
 ```javascript
@@ -448,6 +445,21 @@ Kicks a specific item by id, as opposed to kicking the first N items (like
 - `item_id` is the ID of the item we want to kick.
 - `success` is fired when the operation completes.
 - `error` is fired if something goes wrong while kicking.
+
+#### Hustle.Queue.touch
+```javascript
+hustle.Queue.touch(id, {
+    success: function() { ... },
+    error: function(e) { ... }
+});
+```
+
+Reset an item's time to run value (ie reset the timer that moves it to the ready
+state if it isn't released/deleted within a certain amount of time).
+
+- `id` specifies the ID of the item we're resetting the timer for.
+- `success` is fired when finished.
+- `error` is fired when something goes wrong.
 
 #### Hustle.Queue.count\_ready
 ```javascript
