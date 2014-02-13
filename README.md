@@ -628,6 +628,6 @@ Just navigate ur browser to `Hustle/test/` and let the *magic happen*.
 
 License
 -------
-MIT. __YAY.__
+MIT. __JOY.__
 
 
