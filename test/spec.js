@@ -713,6 +713,32 @@ describe('Hustle promise API (subset)', function() {
 
 	});
 
+	it('can chain calls', function(done) {
+		var error	=	null;
+		var send	=	'could i speak to the drug dealer of the house please?';
+		var message	=	null;
+
+		var finish	=	function()
+		{
+			expect(message).toBe(send);
+			expect(error).toBe(null);
+			done();
+		};
+
+		hustle.Queue.put(send, {tube: 'outgoing'}).then(function(item) {
+			return hustle.Queue.reserve({tube: 'outgoing'});
+		}).then(function(item) {
+			message	=	item.data;
+			return hustle.Queue.delete(item.id);
+		}).then(function() {
+			finish();
+		}).catch(function(e) {
+			error	=	e;
+			console.error('err: ', e);
+			finish();
+		});
+	});
+
 	it('can close a database', function(done) {
 		var res	=	hustle.close();
 		expect(res).toBe(true);

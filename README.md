@@ -15,12 +15,9 @@ server somewhere: you can queue up changes to your local data and have them
 synced to your API when a connection becomes available without having to worry
 about losing your jobs/messages between app restarts.
 
-Everything in Hustle is asynchronous so until enough people bug me to implement
-futures or promises or deferreds or whatever the hell they're called this week,
-you're stuck in callback hell.
-
 - [Getting started](#getting-started)
 - [API](#api)
+- [Promises](#promises)
 - [Tests](#tests)
 - [License](#license)
 
@@ -204,11 +201,15 @@ hustle.close()
 Closes the Hustle database. Returns `true` if the DB was closed, otherwise
 returns `false` (if the DB wasn't open).
 
+This function is synchronous.
+
 ### Hustle.is\_open
 ```javascript
 hustle.is_open()
   => boolean
 ```
+
+This function is synchronous.
 
 ### Hustle.wipe
 ```javascript
@@ -218,6 +219,8 @@ hustle.wipe();
 Closes the Hustle database and obliterates it. Very useful for debugging apps
 *or* if you have no interest in actually persisting, you can call `wipe()` each
 time your app loads just before you call [open](#hustleopen).
+
+This function is synchronous.
 
 ### Hustle.Queue
 The Hustle queue system allows jobs to be atomically grabbed and operated on
@@ -507,9 +510,43 @@ on instantiation, so you'll only need to call `consumer.start()` after calling
 - `consumer.stop()` stops the consumer from listening to the channel. Can be
 started again with `consumer.start()`
 
+Promises
+--------
+Hustle allows using [bluebird](https://github.com/petkaantonov/bluebird) for a
+promise API.
+
+The promise API is activated by calling `hustle.promisify()`:
+
+```javascript
+var hustle = new Hustle();
+hustle.promisify();
+```
+
+This replaces *all* public API functions that take `success`/`error` options
+(any non-synchronous function) to return a promise object instead.
+
+### Examples
+
+```javascript
+var hustle = new Hustle();
+hustle.open().then(function() {
+    return hustle.Queue.put('fetch me my slippers');
+}).then(function() {
+    return hustle.Queue.reserve();
+}).then(function(item) {
+    console.log("WHAT?? I don't take order from you...");
+    return hustle.Queue.delete(item.id)
+}).catch(function(e) {
+    console.error('something went wrong: ', e);
+});
+```
+
+Notice how we can chain a number of calls at the top level and have only one
+error handler for the lot. Very nice.
+
 Tests
 -----
-Just navigate ur browser to `Hustle/test/` and let the magic happen.
+Just navigate ur browser to `Hustle/test/` and let the *magic happen*.
 
 License
 -------
