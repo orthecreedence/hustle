@@ -24,7 +24,10 @@ about losing your jobs/messages between app restarts.
 Getting started
 ---------------
 ```javascript
-var hustle   =   new Hustle({ tubes: ['jobs'] });
+var hustle   =   new Hustle({
+    tubes: ['jobs'],
+    db_version: 2       // should increase whenever tubes change
+});
 ```
 
 Create our Hustle object. This provides the interface for all our messaging and
@@ -165,15 +168,25 @@ API
 ```javascript
 var hustle   =   new Hustle({
     db_name: 'hustle',
-    tubes: ['tube1', 'tube2', ...]
+    db_version: 1,
+    housekeeping_delay: 1000,
+    message_lifetime: 10000,
+    tubes: ['default']
 });
 ```
 Creates a Hustle object. Note that the tubes the queue uses *must* be specified.
 You cannot use queue tubes that haven't been declared.
 
-- `db_name` specifies the name we want to open the Hustle queue onto. Defaults
-to "hustle".
+- `db_name` specifies the name we want to open the Hustle queue onto. Default:
+`"hustle"`
+- `db_version` is the IndexedDB version number to open the database under. This
+should change whenever your tubes change *or else* (or else what? or else they
+will probably not be updated in the schema). Default: `1`
+- `housekeeping_delay` is a value (in ms) that determines how often this Hustle
+object will remove old pubsub messages. Default: `1000`
+- `message_lifetime` is how long messages live in the database. Default: `10000`
 - `tubes` specifies what tubes we want to be present on [open](#hustleopen).
+Default: `['default']`
 
 Once instantiated, the hustle object has two namespaces: [Queue](#hustlequeue)
 and [Pubsub](#hustlepubsub).

@@ -1,7 +1,6 @@
 (function(window, undefined) {
 	"use strict";
-	var version		=	'0.1.1';
-	var db_version	=	4;
+	var version		=	'0.1.3';
 
 	var indexedDB	=	window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB || window.oIndexedDB || window.msIndexedDB;
 	var IDBKeyRange	=	window.IDBKeyRange || window.webkitIDBKeyRange
@@ -36,11 +35,19 @@
 		qoptions || (qoptions = {});
 		if(!qoptions.tubes) qoptions.tubes = [];
 
+		// database version. should change every time the tubes change
+		var db_version			=	qoptions.db_version ? qoptions.db_version : 1;
+
+		// how often we check for stale pubsub messages
 		var housekeeping_delay	=	qoptions.housekeeping_delay ? qoptions.housekeeping_delay : 1000;
+
+		// how long pubsub messages live
 		var msg_lifetime		=	qoptions.message_lifetime ? qoptions.message_lifetime : 10000;
 
 		// define some system db vars
 		var db_name	=	qoptions.db_name ? qoptions.db_name : 'hustle';
+
+		// our reserved tables
 		var tbl		=	{
 			ids: '_ids',
 			reserved: '_reserved',
