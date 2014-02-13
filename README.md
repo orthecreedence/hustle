@@ -249,16 +249,38 @@ not implemented.
 All items added to the Hustle queue follow this basic format:
 ```javascript
 {
-    id: 6969,               // the item's Hustle-assigned unique id
-    priority: 1024,         // the item's priority (lower is more important, defaults to 1024)
-    data: { ... },          // the item's user-specified data payload
-    age: 0,                 // how old the item is (unimplemented)
-    reserves: 0,            // how many times this item has been reserved
-    releases: 0,            // how many times this item has been released
-    timeouts: 0,            // how many times this item has timed out (unimplemented)
-    buries: 0,              // how many times this item has been buried
-    kicks: 0,               // how many times this item has been kicked
-    created: 1391835692616  // when this item was created (new Date().getTime())
+    // the item's Hustle-assigned unique id
+    id: 6969,
+
+    // the item's priority (lower is more important, defaults to 1024)
+    priority: 1024,
+
+    // the item's user-specified data payload
+    data: ...,
+
+    // how old the item is (unimplemented)
+    age: 0,
+
+    // how many times this item has been reserved
+    reserves: 0,
+
+    // how many times this item has been released
+    releases: 0,
+
+    // how many times this item has timed out (unimplemented)
+    timeouts: 0,
+
+    // how many times this item has been buried
+    buries: 0,
+
+    // how many times this item has been kicked
+    kicks: 0,
+
+    // what state this item is in (set by peek)
+    state: 'ready|buried|reserved',
+
+    // when this item was created (new Date().getTime())
+    created: 1391835692616
 }
 ```
 
@@ -475,9 +497,14 @@ arbitrary channels. Unlike the [queue](#hustlequeue), a message will be seen by
 All items added to the Hustle queue follow this basic format:
 ```javascript
 {
-    id: 6969,               // the item's Hustle-assigned unique id
-    data: { ... },          // the item's user-specified message payload
-    created: 1391835692616  // when this item was created (new Date().getTime())
+    // the item's Hustle-assigned unique id
+    id: 6969,
+
+    // the item's user-specified message payload
+    data: ...,
+
+    // when this item was created (new Date().getTime())
+    created: 1391835692616
 }
 ```
 
