@@ -565,7 +565,19 @@
 						return;
 					}
 
-					move_item(id, tbl.reserved, item.tube, {
+					var tube	=	item.tube;
+
+					if(options.delay)
+					{
+						var delay	=	parseInt(options.delay);
+						if(delay)
+						{
+							item.activate	=	new Date().getTime() + (1000 * delay);
+							tube			=	tbl.delayed;
+						}
+					}
+
+					move_item(id, tbl.reserved, tube, {
 						transform: function(item) {
 							item.releases++;
 							if(options.priority)

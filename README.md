@@ -386,6 +386,7 @@ wasn't found.
 ```javascript
 hustle.Queue.release(item_id, {
     priority: 1024,
+    delay: 0,
     success: function() { ... },
     error: function(e) { ... }
 });
@@ -395,7 +396,9 @@ Releases an item back into the queue. This un-reserves an item and makes it
 available on its original tube for others to consume via [reserve](#hustlequeuereserve).
 
 - `priority` specifies the new priority to set on the item being released. If
-unspecified, will default to the item's original priority.
+unspecified, will default to the item's original priority. Default: `1024`
+- `delay` specifies how many seconds the jb must wait before becoming ready
+after releasing it. Default: `0`
 - `success` is fired when the item is released back into the queue.
 - `error` is fired if something went wrong while releasing.
 
