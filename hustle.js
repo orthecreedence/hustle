@@ -886,7 +886,7 @@
 				var curr	=	new Date().getTime();
 				keys.forEach(function(key) {
 					var time	=	seen_messages[key];
-					if(time < (curr - (1000 + msg_lifetime))) delete seen_messages[keys[i]];
+					if(time < (curr - (1000 + msg_lifetime))) delete seen_messages[key];
 				});
 			};
 
