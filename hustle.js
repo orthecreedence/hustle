@@ -287,7 +287,8 @@
 					return;
 				}
 				do_move_item(item, function(e) {
-					store.delete(item_id);
+					var req		=	store.delete(item_id);
+					req.onerror	=	options.error;
 				});
 			};
 		};
@@ -501,7 +502,8 @@
 				{
 					put_in_reserved(cursor.value, function(e) {
 						// remove the item from the tube once we know it's reserved
-						store.delete(cursor.value.id);
+						var req		=	store.delete(cursor.value.id);
+						req.onerror	=	options.error;
 					});
 				}
 			};
@@ -676,7 +678,8 @@
 				{
 					put_in_tube(cursor.value, function(e) {
 						// remove the item from the tube once we know it's reserved
-						store.delete(cursor.key);
+						var req		=	store.delete(cursor.key);
+						req.onerror	=	options.error;
 					});
 					records++;
 					if(records < num) cursor.continue();
