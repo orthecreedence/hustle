@@ -632,7 +632,7 @@ describe('Hustle pubsub operations', function() {
 		var sub1;
 		var sub2;
 
-		var finish			=	function()
+		var finish	=	function()
 		{
 			got_messages++;
 			if(got_messages < num_messages * 2) return;
@@ -738,6 +738,33 @@ describe('Hustle pubsub operations', function() {
 				});
 			})(i);
 		}
+	});
+
+	it('will not give a subscriber stale messages', function(done) {
+		var count	=	0;
+		var errors	=	[];
+		var sub;
+		var finish	=	function()
+		{
+			expect(count).toBe(0);
+			expect(errors.length).toBe(0);
+			sub.stop();
+			done();
+		};
+
+		hustle.Pubsub.publish('gnarly', {count: 2}, {
+			success: function() {
+				sub	=	new hustle.Pubsub.Subscriber('gnarly', function(msg) {
+					count	+=	msg.data.count;
+				});
+				console.log('GNARLY');
+				setTimeout(finish, 1000);
+			},
+			error: function(e) {
+				errors.push(e);
+				console.error('err: ', e);
+			}
+		});
 	});
 
 	it('can close a database', function(done) {

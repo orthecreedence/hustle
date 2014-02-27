@@ -891,6 +891,7 @@
 			soptions || (soptions = {});
 
 			var delay			=	soptions.delay ? soptions.delay : 100;
+			var start_time		=	new Date().getTime();
 			var do_stop			=	false;
 			var seen_messages	=	{};
 
@@ -938,7 +939,7 @@
 					var cursor	=	e.target.result;
 					if(cursor)
 					{
-						if(seen_messages[cursor.value.id])
+						if(seen_messages[cursor.value.id] || cursor.value.created < start_time)
 						{
 							cursor.continue();
 						}
