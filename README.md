@@ -17,8 +17,8 @@ about losing your jobs/messages between app restarts.
 
 - [Getting started](#getting-started)
 - [API](#api)
-- [Promises](#promises)
 - [Exceptions](#exceptions)
+- [Promises](#promises)
 - [Tests](#tests)
 - [License](#license)
 
