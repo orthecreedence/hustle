@@ -1167,6 +1167,7 @@
 			this.Queue.touch		=	do_promisify(this.Queue.touch, 1);
 			this.Queue.count_ready	=	do_promisify(this.Queue.count_ready, 1);
 			this.Pubsub.publish		=	do_promisify(this.Pubsub.publish, 2);
+			return this;
 		}.bind(this);
 		this.debug		=	{
 			get_db: function() { return db; }
