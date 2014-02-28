@@ -778,8 +778,7 @@ describe('Hustle pubsub operations', function() {
 describe('Hustle promise API (subset)', function() {
 	var hustle	=	new Hustle({
 		tubes: ['incoming', 'outgoing'],
-	});
-	hustle.promisify();
+	}).promisify();
 
 	it('can clear a database', function(done) {
 		var res	=	hustle.wipe();
