@@ -629,6 +629,7 @@ This replaces *all* public API functions that take `success`/`error` options
 
 ```javascript
 var hustle = new Hustle();
+hustle.promisify();
 hustle.open().then(function() {
     return hustle.Queue.put('fetch me my slippers');
 }).then(function() {
