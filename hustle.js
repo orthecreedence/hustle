@@ -1,6 +1,6 @@
 (function(window, undefined) {
 	"use strict";
-	var version				=	'0.1.5';
+	var version				=	'0.1.6';
 	var internal_db_version	=	4;
 
 	var indexedDB	=	window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB || window.oIndexedDB || window.msIndexedDB;
@@ -277,15 +277,16 @@
 			req.onsuccess	=	function(e)
 			{
 				var item	=	req.result;
-				var item_id	=	item.id;
-				// account for the buried table's IDs
-				if(from == tbl.buried) item_id = item._id;
-
 				if(!item)
 				{
 					if(options.error) options.error(new HustleNotFound('item '+ id +' wasn\'t found'));
 					return;
 				}
+
+				var item_id	=	item.id;
+				// account for the buried table's IDs
+				if(from == tbl.buried) item_id = item._id;
+
 				do_move_item(item, function(e) {
 					var req		=	store.delete(item_id);
 					req.onerror	=	options.error;
