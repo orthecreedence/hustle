@@ -1139,6 +1139,7 @@
 		this.close		=	close;
 		this.is_open	=	function() { return !!db; };
 		this.wipe		=	wipe;
+		this.Error		=	Error;
 		this.Pubsub		=	Pubsub;
 		this.Queue		=	Queue;
 		this.promisify	=	function()
@@ -1175,6 +1176,13 @@
 		};
 
 		return this;
+	};
+	Hustle.Error	=	{
+		DBClosed: HustleDBClosed,
+		DBOpened: HustleDBOpened,
+		BadTube: HustleBadTube,
+		BadID: HustleBadID,
+		NotFound: HustleNotFound
 	};
 	window.Hustle	=	Hustle;
 })(window);

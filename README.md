@@ -587,26 +587,27 @@ started again with `consumer.start()`
 
 Exceptions
 ----------
-This details some of the exceptions that can be thrown by Hustle.
+This details some of the exceptions that can be thrown by Hustle. These classes
+are available in the static `Hustle.Error` namespace.
 
-### HustleDBClosed
+### Hustle.Error.DBClosed
 Thrown when you try to do any operations in Hustle and the database is closed.
 Make sure you [open](#hustleopen) it first!
 
-### HustleDBOpened
+### Hustle.Error.DBOpened
 Thrown when you try to open the DB and it's already opened through the current
 Hustle object.
 
-### HustleBadTube
+### Hustle.Error.BadTube
 Thrown when you try to access a tube that doesn't exist. Be sure to declare your
 tubes when [instantiating Hustle](#hustle-class) *and* bump up the `db_version`
 property.  
 
-### HustleBadID
+### Hustle.Error.BadID
 Thrown when a bad ID value (like `null`) is passed to a function that takes an
 ID (like [peek](#hustlequeuepeek), [delete](#hustlequeuedelete), etc).
 
-### HustleNotFound
+### Hustle.Error.NotFound
 Thrown when an operation is performed on an item that doesn't exist (or isn't in
 the location it's supposed to be in).
 
