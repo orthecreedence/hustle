@@ -757,7 +757,6 @@ describe('Hustle pubsub operations', function() {
 				sub	=	new hustle.Pubsub.Subscriber('gnarly', function(msg) {
 					count	+=	msg.data.count;
 				});
-				console.log('GNARLY');
 				setTimeout(finish, 1000);
 			},
 			error: function(e) {
@@ -935,6 +934,125 @@ describe('Hustle promise API (subset)', function() {
 			console.error('err: ', e);
 			finish();
 		});
+	});
+
+	it('can close a database', function(done) {
+		var res	=	hustle.close();
+		expect(res).toBe(true);
+		expect(hustle.is_open()).toBe(false);
+		done();
+	});
+});
+
+describe('Stress tests', function() {
+	jasmine.DEFAULT_TIMEOUT_INTERVAL	=	16000;
+
+	var hustle	=	new Hustle({
+		tubes: ['jobs'],
+	}).promisify();
+
+	it('can clear a database', function(done) {
+		var res	=	hustle.wipe();
+		expect(res).toBe(true);
+		done();
+	});
+
+	it('can open a database', function(done) {
+		var db	=	null;
+		var finished	=	function()
+		{
+			expect(db instanceof IDBDatabase).toBe(true);
+			expect(hustle.is_open()).toBe(true);
+			done();
+		};
+		hustle.open().then(function(e) {
+			db	=	e.target.result;
+			finished();
+		}).catch(function(e) {
+			console.error('err: ', e);
+			finished();
+		});
+	});
+
+	it('can withstand a good pounding (queue)', function(done) {
+		var con1, con2, con3;
+		var errors		=	[];
+		var num_items	=	50;
+		var got_items	=	0;
+
+		var finish	=	function()
+		{
+			got_items++;
+			if(got_items < num_items) return;
+
+			expect(errors.length).toBe(0);
+			con1.stop();
+			con2.stop();
+			con3.stop();
+			done();
+		};
+
+		var dispatch	=	function(job)
+		{
+			finish();
+		};
+
+		var errorfn	=	function(e)
+		{
+			console.error('err: ', e);
+			errors.push(e);
+			finish();
+		};
+
+		con1	=	new hustle.Queue.Consumer(dispatch, {tube: 'jobs', error: errorfn});
+		con2	=	new hustle.Queue.Consumer(dispatch, {tube: 'jobs', error: errorfn});
+		con3	=	new hustle.Queue.Consumer(dispatch, {tube: 'jobs', error: errorfn});
+
+		var job	=	{type: 'dismantle NSA'};
+		for(var i = 0; i < num_items; i++)
+		{
+			hustle.Queue.put(job, {tube: 'jobs'}).catch(errorfn);
+		}
+	});
+
+	it('can take a beating (pubsub)', function(done) {
+		var sub1, sub2, sub3;
+		var errors		=	[];
+		var num_items	=	100;
+		var got_items	=	0;
+
+		var finish	=	function()
+		{
+			got_items++;
+			if(got_items < (num_items * 3)) return;
+
+			expect(errors.length).toBe(0);
+			sub1.stop();
+			sub2.stop();
+			sub3.stop();
+			done();
+		};
+
+		var dispatch	=	function(msg)
+		{
+			finish();
+		};
+
+		var errorfn	=	function(e)
+		{
+			console.error('err: ', e);
+			errors.push(e);
+			finish();
+		};
+
+		sub1	=	new hustle.Pubsub.Subscriber('gorlami', dispatch);
+		sub2	=	new hustle.Pubsub.Subscriber('gorlami', dispatch);
+		sub3	=	new hustle.Pubsub.Subscriber('gorlami', dispatch);
+
+		for(var i = 0; i < num_items; i++)
+		{
+			hustle.Pubsub.publish('gorlami', 'MARGARETTTTTI').catch(errorfn);
+		}
 	});
 
 	it('can close a database', function(done) {
