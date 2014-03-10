@@ -1,6 +1,6 @@
 (function(window, undefined) {
 	"use strict";
-	var version				=	'0.1.6';
+	var version				=	'0.1.7';
 	var internal_db_version	=	4;
 
 	var indexedDB	=	window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB || window.oIndexedDB || window.msIndexedDB;
