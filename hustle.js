@@ -1071,6 +1071,10 @@
 							return item;
 						},
 						error: function(e) {
+							if(e instanceof HustleNotFound)
+							{
+								move_items.erase(item);
+							}
 							console.error('Hustle: ttr move: ', e);
 						}
 					});
