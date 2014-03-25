@@ -594,7 +594,10 @@ describe('Hustle queue delayed/ttr operations', function() {
 });
 
 describe('Hustle pubsub operations', function() {
-	var hustle	=	new Hustle();
+	var hustle	=	new Hustle({
+		maintenance_delay: 2000,
+		message_lifetime: 1000
+	});
 
 	it('can clear a database (yes, again)', function(done) {
 		var res	=	hustle.wipe();
@@ -764,6 +767,35 @@ describe('Hustle pubsub operations', function() {
 				console.error('err: ', e);
 			}
 		});
+	});
+
+	it('will not double up messages', function(done) {
+		var count	=	0;
+		var errors	=	[];
+		var sub;
+		var finish	=	function()
+		{
+			expect(count).toBe(1);
+			expect(errors.length).toBe(0);
+			sub.stop();
+			done();
+		};
+
+		sub	=	new hustle.Pubsub.Subscriber('double', function(msg) {
+			count++;
+		}, { delay: 500 });
+
+		var do_publish	=	function()
+		{
+			hustle.Pubsub.publish('double', 'testlol', {
+				error: function(e) {
+					errors.push(e);
+					console.error('err: ', e);
+				}
+			});
+		}
+		setTimeout(do_publish, 200);
+		setTimeout(finish, 3000);
 	});
 
 	it('can close a database', function(done) {
