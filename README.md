@@ -116,30 +116,6 @@ A [consumer](#hustlequeueconsumer) listens to a particular tube and calls the
 given function for each job it gets. It will do this indefinitely until
 `consumer.stop()` is called.
 
-### Pubsub
-
-```javascript
-var subscriber = new hustle.Pubsub.Subscriber('complaints', function(msg) {
-    console.log('got a complaint! ', msg);
-});
-```
-
-A pubsub [subscriber](#hustlepubsubsubscriber) listens to the given channel for
-messages, calling the given function for each one. Any number of subscribers can
-listen to a channel and get all messages that flow through it, unlike a queue
-where only one consumer can access a job at a time.
-
-```javascript
-hustle.Pubsub.publish('complaints', 'my roof is leaking. no, seriously it is', {
-    success: function(msg) {
-        console.log('successfully sent message ', msg.id);
-    }
-});
-```
-
-[Publish](#hustlepubsubpublish) a message to a channel. All subscribers of that
-channel will get the message.
-
 API
 ---
 
@@ -161,10 +137,6 @@ API
   - [Hustle.Queue.touch](#hustlequeuetouch)
   - [Hustle.Queue.count\_ready](#hustlequeuecount_ready)
   - [Hustle.Queue.Consumer](#hustlequeueconsumer)
-- [Hustle.Pubsub](#hustlepubsub)
-  - [Message item format](#message-item-format)
-  - [Hustle.Pubsub.publish](#hustlepubsubpublish)
-  - [Hustle.Pubsub.Subscriber](#hustlepubsubsubscriber)
 
 ### Hustle class
 ```javascript
@@ -184,14 +156,11 @@ You cannot use queue tubes that haven't been declared.
 - `db_version` is the IndexedDB version number to open the database under. This
 should change whenever your tubes change *or else* (or else what? or else they
 will probably not be updated in the schema). Default: `1`
-- `housekeeping_delay` is a value (in ms) that determines how often this Hustle
-object will remove old pubsub messages. Default: `1000`
-- `message_lifetime` is how long messages live in the database. Default: `10000`
+- `maintenance_delay` is a value (in ms) that determines how often this Hustle
+object will do DB maintenance (moving expired/delayed jobs back to the ready
+state, mainly). Default: `1000`
 - `tubes` specifies what tubes we want to be present on [open](#hustleopen).
 Default: `['default']`
-
-Once instantiated, the hustle object has two namespaces: [Queue](#hustlequeue)
-and [Pubsub](#hustlepubsub).
 
 ### Hustle.open
 ```javascript
@@ -519,72 +488,6 @@ so you don't need to call this unless you previously called `consumer.stop()`.
 - `consumer.stop()` stops the consumer from polling the queue. Can be started
 again via `consumer.start()`.
 
-### Hustle.Pubsub
-The Hustle pubsub system allows any number of subscribers to recieve messages on
-arbitrary channels. Unlike the [queue](#hustlequeue), a message will be seen by
-*all* subscribers on a channel.
-
-#### Message item format
-All items added to the Hustle queue follow this basic format:
-```javascript
-{
-    // the item's Hustle-assigned unique id
-    id: 6969,
-
-    // the item's user-specified message payload
-    data: ...,
-
-    // when this item was created (new Date().getTime())
-    created: 1391835692616
-}
-```
-
-#### Hustle.Pubsub.publish
-```javascript
-hustle.Pubsub.publish(channel, message, {
-    success: function(msg) { ... },
-    error: function(e) { ... }
-});
-```
-
-Publishes a message to a channel. Unlike the [queue](#hustlequeue)'s tubes,
-channels are arbitrary and do *not* need to be declared.
-
-- `channel` is a string channel name.
-- `message` is any javascript value you want to pass as a message.
-- `success` is triggered when the message is added to the channel, the first
-argument being the message added in the [standard format](#message-item-format).
-- `error` is triggered is there's a problem adding the message.
-
-#### Hustle.Pubsub.Subscriber
-```javascript
-var subscriber = new hustle.Pubsub.Subscriber(channel, dispatch_fn, {
-    delay: 100,
-    enable_fn: function() { ... },
-    error: function(e) { ... }
-});
-```
-
-The Subscriber class listens on the given channel and passes any messages
-recieved to the `dispatch_fn`.
-
-- `channel` is a string channel name.
-- `dispatch_fn` is a function with one argument that will be passed message
-from the channel. Each passed message will be in the [standard format](#message-item-format).
-- `delay` is how many ms between polls to the messages table (defaults to 100).
-- `enable_fn` is an optional function you pass that the subscriber calls before
-each time it polls for queue items. If the function returns `false` then the
-polling is stopped.
-- `error` is triggered if there are any problems while subscribed.
-
-The object returned has two methods:
-
-- `consumer.start()` starts subscribing. Note that the Subscriber class starts
-on instantiation, so you'll only need to call `consumer.start()` after calling
-`consumer.stop()`.
-- `consumer.stop()` stops the consumer from listening to the channel. Can be
-started again with `consumer.start()`
-
 Exceptions
 ----------
 This details some of the exceptions that can be thrown by Hustle. These classes
@@ -636,7 +539,7 @@ hustle.open().then(function() {
 }).then(function() {
     return hustle.Queue.reserve();
 }).then(function(item) {
-    console.log("WHAT?? I don't take order from you...");
+    console.log("WHAT?? I don't take orders from you...");
     return hustle.Queue.delete(item.id)
 }).catch(function(e) {
     console.error('something went wrong: ', e);

@@ -4,7 +4,6 @@ describe('Hustle', function() {
 	it('has known exported functions', function() {
 		var main_exports	=	['open', 'close', 'is_open', 'wipe', 'promisify'];
 		var queue_exports	=	['peek', 'put', 'reserve', 'delete', 'release', 'bury', 'kick', 'kick_job', 'count_ready', 'Consumer']; 
-		var pubsub_exports	=	['publish', 'Subscriber']; 
 		for(var i = 0; i < main_exports.length; i++)
 		{
 			expect(typeof hustle[main_exports[i]]).toBe('function');
@@ -12,10 +11,6 @@ describe('Hustle', function() {
 		for(var i = 0; i < queue_exports.length; i++)
 		{
 			expect(typeof hustle.Queue[queue_exports[i]]).toBe('function');
-		}
-		for(var i = 0; i < pubsub_exports.length; i++)
-		{
-			expect(typeof hustle.Pubsub[pubsub_exports[i]]).toBe('function');
 		}
 	});
 
@@ -593,219 +588,6 @@ describe('Hustle queue delayed/ttr operations', function() {
 	});
 });
 
-describe('Hustle pubsub operations', function() {
-	var hustle	=	new Hustle({
-		maintenance_delay: 2000,
-		message_lifetime: 1000
-	});
-
-	it('can clear a database (yes, again)', function(done) {
-		var res	=	hustle.wipe();
-		expect(res).toBe(true);
-		done();
-	});
-
-	it('can open a database (again)', function(done) {
-		var db	=	null;
-		var finished	=	function()
-		{
-			expect(db instanceof IDBDatabase).toBe(true);
-			expect(hustle.is_open()).toBe(true);
-			done();
-		};
-		hustle.open({
-			success: function(e) {
-				db	=	e.target.result;
-				finished();
-			},
-			error: function(e) {
-				console.error('err: ', e);
-				finished();
-			}
-		});
-	});
-
-	it('can use multiple subscribers and get each message only once each', function(done) {
-		var errors			=	[];
-		var num_messages	=	3;
-		var sent_messages	=	[];
-		var got_messages	=	0;
-		var seen_messages	=	{};
-
-		var sub1;
-		var sub2;
-
-		var finish	=	function()
-		{
-			got_messages++;
-			if(got_messages < num_messages * 2) return;
-
-			expect(errors.length).toBe(0);
-			expect(sent_messages.length).toBe(4);
-			expect(got_messages).toBe(6);
-			expect(Object.keys(seen_messages).length).toBe(3);
-			sub1.stop();
-			sub2.stop();
-			done();
-		};
-
-		var dispatch		=	function(msg)
-		{
-			if(!seen_messages[msg.id]) seen_messages[msg.id] = 0;
-			seen_messages[msg.id]++;
-			finish();
-		};
-
-		var opts	=	{
-			error: function(e) {
-				errors.push(e);
-				console.error('err: ', e);
-				finish();
-			}
-		};
-
-		sub1	=	new hustle.Pubsub.Subscriber('herp', dispatch, {});
-		sub2	=	new hustle.Pubsub.Subscriber('herp', dispatch, {});
-
-		var opts	=	{
-			success: function(msg) {
-				sent_messages.push(msg.id);
-			},
-			error: function(e) {
-				errors.push(e);
-				console.error('err: ', e);
-			}
-		};
-		hustle.Pubsub.publish('void', 'and when they opened up her purse, they found a snail inside', opts);
-		hustle.Pubsub.publish('herp', 'stop that bending', opts);
-		hustle.Pubsub.publish('herp', 'your dog will love it', opts);
-		hustle.Pubsub.publish('herp', 'impress the ladies', opts);
-	});
-
-	it('will order messages properly', function(done) {
-		var num_messages	=	10;
-		var got_messages	=	0;
-		var errors			=	[];
-		var div				=	10;
-		var finalval		=	div;
-		var sub				=	null;
-
-		// calculate a value that will only happen in the given order
-		for(var i = 0; i < num_messages; i++)
-		{
-			finalval	=	Math.log(finalval) + (i + 1);
-		}
-
-		var finish	=	function()
-		{
-			got_messages++;
-			if(got_messages < num_messages) return;
-			expect(errors.length).toBe(0);
-			expect(div).toBe(finalval);
-			sub.stop();
-			done();
-		};
-
-		var opts	=	{
-			error: function(e) {
-				errors.push(e);
-				console.error('err: ', e);
-				finish();
-			}
-		};
-
-		sub	=	new hustle.Pubsub.Subscriber('order', function(msg) {
-			div	=	Math.log(div) + (msg.data.val + 1);
-			finish();
-		}, opts);
-		sub.stop();
-
-		var sent		=	0;
-		var do_start	=	function()
-		{
-			sent++;
-			if(sent < num_messages) return false;
-			sub.start();
-		};
-
-		for(var i = 0; i < num_messages; i++)
-		{
-			(function(val) {
-				hustle.Pubsub.publish('order', {val: val}, {
-					success: function(msg) {
-						do_start();
-					},
-					error: function(e) {
-						console.error('err: ', e);
-					}
-				});
-			})(i);
-		}
-	});
-
-	it('will not give a subscriber stale messages', function(done) {
-		var count	=	0;
-		var errors	=	[];
-		var sub;
-		var finish	=	function()
-		{
-			expect(count).toBe(0);
-			expect(errors.length).toBe(0);
-			sub.stop();
-			done();
-		};
-
-		hustle.Pubsub.publish('gnarly', {count: 2}, {
-			success: function() {
-				sub	=	new hustle.Pubsub.Subscriber('gnarly', function(msg) {
-					count	+=	msg.data.count;
-				});
-				setTimeout(finish, 1000);
-			},
-			error: function(e) {
-				errors.push(e);
-				console.error('err: ', e);
-			}
-		});
-	});
-
-	it('will not double up messages', function(done) {
-		var count	=	0;
-		var errors	=	[];
-		var sub;
-		var finish	=	function()
-		{
-			expect(count).toBe(1);
-			expect(errors.length).toBe(0);
-			sub.stop();
-			done();
-		};
-
-		sub	=	new hustle.Pubsub.Subscriber('double', function(msg) {
-			count++;
-		}, { delay: 500 });
-
-		var do_publish	=	function()
-		{
-			hustle.Pubsub.publish('double', 'testlol', {
-				error: function(e) {
-					errors.push(e);
-					console.error('err: ', e);
-				}
-			});
-		}
-		setTimeout(do_publish, 200);
-		setTimeout(finish, 3000);
-	});
-
-	it('can close a database', function(done) {
-		var res	=	hustle.close();
-		expect(res).toBe(true);
-		expect(hustle.is_open()).toBe(false);
-		done();
-	});
-});
-
 describe('Hustle promise API (subset)', function() {
 	var hustle	=	new Hustle({
 		tubes: ['incoming', 'outgoing'],
@@ -917,31 +699,6 @@ describe('Hustle promise API (subset)', function() {
 		hustle.Queue.reserve({tube: 'outgoing'}).then(success).catch(error);
 	});
 
-	it('can publish/subscribe', function(done) {
-		var message	=	null;
-		var send	=	'you\'re loitering too, man. that\'s right you\'re loitering too.';
-		var error	=	null;
-		var sub		=	null;
-		var finish	=	function()
-		{
-			expect(message).toBe(send);
-			expect(error).toBe(null);
-			expect(sub.stop()).toBe(true);
-			done();
-		};
-
-		sub	=	new hustle.Pubsub.Subscriber('gabbagabbahey', function(msg) {
-			message	=	msg.data;
-			finish();
-		}, {error: function(e) { error = e; finish(); }});
-
-		hustle.Pubsub.publish('gabbagabbahey', send).then(function(msg) {
-		}).catch(function(e) {
-			error	=	e;
-		});
-
-	});
-
 	it('can chain calls', function(done) {
 		var error	=	null;
 		var send	=	'could i speak to the drug dealer of the house please?';
@@ -1044,46 +801,6 @@ describe('Stress tests', function() {
 		for(var i = 0; i < num_items; i++)
 		{
 			hustle.Queue.put(job, {tube: 'jobs'}).catch(errorfn);
-		}
-	});
-
-	it('can take a beating (pubsub)', function(done) {
-		var sub1, sub2, sub3;
-		var errors		=	[];
-		var num_items	=	100;
-		var got_items	=	0;
-
-		var finish	=	function()
-		{
-			got_items++;
-			if(got_items < (num_items * 3)) return;
-
-			expect(errors.length).toBe(0);
-			sub1.stop();
-			sub2.stop();
-			sub3.stop();
-			done();
-		};
-
-		var dispatch	=	function(msg)
-		{
-			finish();
-		};
-
-		var errorfn	=	function(e)
-		{
-			console.error('err: ', e);
-			errors.push(e);
-			finish();
-		};
-
-		sub1	=	new hustle.Pubsub.Subscriber('gorlami', dispatch);
-		sub2	=	new hustle.Pubsub.Subscriber('gorlami', dispatch);
-		sub3	=	new hustle.Pubsub.Subscriber('gorlami', dispatch);
-
-		for(var i = 0; i < num_items; i++)
-		{
-			hustle.Pubsub.publish('gorlami', 'MARGARETTTTTI').catch(errorfn);
 		}
 	});
 
