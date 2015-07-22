@@ -1,17 +1,5 @@
 Hustle: A persistent javascript queuing/messaging library
 =============================================================
-__NOTE:__ Don't use this library. It's pretty much unsupported at this point.
-The main reason being that IndexedDB is an *ok* idea, but browsers refuse to
-support it to the point where it's usable for anything more than a very simple
-key-value store. Hustle overreached the abilities of IndexedDB in both Chrome
-and Firefox, often causing failed operations or causing them to outright crash.
-
-This may not be the case further down the road, but until it runs reliably in
-most browsers, this library has two large stamps on it: `unsupported` and
-`caution`!
-
----
-
 Hustle is a javascript queuing and messaging library built on top of IndexedDB.
 
 The idea is that sometimes you have two pieces of an application that need to
