@@ -1,9 +1,9 @@
 describe('Hustle', function() {
-	var hustle	=	new Hustle();
+	var hustle = new Hustle();
 
 	it('has known exported functions', function() {
-		var main_exports	=	['open', 'close', 'is_open', 'wipe', 'promisify'];
-		var queue_exports	=	['peek', 'put', 'reserve', 'delete', 'release', 'bury', 'kick', 'kick_job', 'count_ready', 'Consumer']; 
+		var main_exports = ['open', 'close', 'is_open', 'wipe', 'promisify'];
+		var queue_exports = ['peek', 'put', 'reserve', 'delete', 'release', 'bury', 'kick', 'kick_job', 'count_ready', 'Consumer']; 
 		for(var i = 0; i < main_exports.length; i++)
 		{
 			expect(typeof hustle[main_exports[i]]).toBe('function');
@@ -20,25 +20,25 @@ describe('Hustle', function() {
 });
 
 describe('Hustle queue operations', function() {
-	var hustle	=	new Hustle({
+	var hustle = new Hustle({
 		tubes: ['incoming', 'outgoing'],
 	});
 
 	// stores some of the ids of our queue items
-	var ids	=	{
+	var ids = {
 		first: null,
 		priority: null
 	};
 
 	it('can clear a database', function(done) {
-		var res	=	hustle.wipe();
+		var res = hustle.wipe();
 		expect(res).toBe(true);
 		done();
 	});
 
 	it('can open a database', function(done) {
-		var db	=	null;
-		var finished	=	function()
+		var db = null;
+		var finished = function()
 		{
 			expect(db instanceof IDBDatabase).toBe(true);
 			expect(hustle.is_open()).toBe(true);
@@ -46,7 +46,7 @@ describe('Hustle queue operations', function() {
 		};
 		hustle.open({
 			success: function(e) {
-				db	=	e.target.result;
+				db = e.target.result;
 				finished();
 			},
 			error: function(e) {
@@ -57,11 +57,11 @@ describe('Hustle queue operations', function() {
 	});
 
 	it('can add queue items', function(done) {
-		var num_added	=	0;
-		var num_items	=	10;
-		var errors		=	[];
-		var pri_sum		=	0;
-		var next		=	function()
+		var num_added = 0;
+		var num_items = 10;
+		var errors = [];
+		var pri_sum = 0;
+		var next = function()
 		{
 			if(num_added < num_items) return false;
 			expect(pri_sum).toBe(((num_items - 1) * 1024) + 1000);
@@ -69,14 +69,14 @@ describe('Hustle queue operations', function() {
 			expect(errors.length).toBe(0);
 			done();
 		}
-		var finish_item	=	function(item)
+		var finish_item = function(item)
 		{
 			expect(typeof item.id).toBe('number');
 			num_added++;
 			pri_sum	+=	item.priority;
 			if(item.priority < 1024)
 			{
-				ids.priority	=	item.id;
+				ids.priority = item.id;
 			}
 			else
 			{
@@ -85,7 +85,7 @@ describe('Hustle queue operations', function() {
 			next();
 		};
 
-		var error	=	function(e)
+		var error = function(e)
 		{
 			num_added++;
 			console.error('err: ', e);
@@ -95,7 +95,7 @@ describe('Hustle queue operations', function() {
 
 		for(var i = 0; i < num_items; i++)
 		{
-			var data	=	{task: 'say_hello_'+ i};
+			var data = {task: 'say_hello_'+ i};
 			hustle.Queue.put(data, {
 				tube: 'outgoing',
 				// add a higher-priority item
@@ -109,9 +109,9 @@ describe('Hustle queue operations', function() {
 	});
 
 	it('can reserve an item', function(done) {
-		var id		=	null;
-		var error	=	false;
-		var finish	=	function()
+		var id = null;
+		var error = false;
+		var finish = function()
 		{
 			// should be the lowest priority item
 			expect(id).toBe(ids.priority);
@@ -121,11 +121,11 @@ describe('Hustle queue operations', function() {
 		hustle.Queue.reserve({
 			tube: 'outgoing',
 			success: function(item) {
-				id	=	item.id;
+				id = item.id;
 				finish();
 			},
 			error: function() {
-				error	=	e;
+				error = e;
 				console.error('err: ', e);
 				finish();
 			}
@@ -133,9 +133,9 @@ describe('Hustle queue operations', function() {
 	});
 
 	it('can count ready items in a tube', function(done) {
-		var count	=	null;
-		var error	=	false;
-		var finish	=	function()
+		var count = null;
+		var error = false;
+		var finish = function()
 		{
 			expect(error).toBe(false);
 			// 10 - 1 reserved item
@@ -144,11 +144,11 @@ describe('Hustle queue operations', function() {
 		};
 		hustle.Queue.count_ready('outgoing', {
 			success: function(num) {
-				count	=	num;
+				count = num;
 				finish();
 			},
 			error: function(e) {
-				error	=	e;
+				error = e;
 				console.error('err: ', e);
 				finish();
 			}
@@ -156,9 +156,9 @@ describe('Hustle queue operations', function() {
 	});
 
 	it('gets a null item when none are available', function(done) {
-		var item	=	{lol: true};
-		var error	=	false;
-		var finish	=	function()
+		var item = {lol: true};
+		var error = false;
+		var finish = function()
 		{
 			expect(item).toBeNull(null);
 			expect(error).toBe(false);
@@ -167,11 +167,11 @@ describe('Hustle queue operations', function() {
 		hustle.Queue.reserve({
 			tube: 'incoming',
 			success: function(i) {
-				item	=	i;
+				item = i;
 				finish();
 			},
 			error: function(e) {
-				error	=	e;
+				error = e;
 				console.error('err: ', e);
 				finish();
 			}
@@ -179,8 +179,8 @@ describe('Hustle queue operations', function() {
 	});
 
 	it('can bury an item', function(done) {
-		var error	=	false;
-		var finish	=	function()
+		var error = false;
+		var finish = function()
 		{
 			expect(error).toBe(false);
 			done();
@@ -190,7 +190,7 @@ describe('Hustle queue operations', function() {
 				finish();
 			},
 			error: function(e) {
-				error	=	e;
+				error = e;
 				console.error('err: ', e);
 				finish();
 			}
@@ -198,11 +198,11 @@ describe('Hustle queue operations', function() {
 	});
 
 	it('can peek queue items', function(done) {
-		var num_peeked	=	0;
-		var num_items	=	2;
-		var errors		=	[];
+		var num_peeked = 0;
+		var num_items = 2;
+		var errors = [];
 
-		var finish		=	function()
+		var finish = function()
 		{
 			num_peeked++;
 			if(num_peeked < num_items) return;
@@ -210,7 +210,7 @@ describe('Hustle queue operations', function() {
 			done();
 		};
 
-		var error	=	function(e)
+		var error = function(e)
 		{
 			errors.push(e);
 			console.error('err: ', e);
@@ -239,8 +239,8 @@ describe('Hustle queue operations', function() {
 	});
 
 	it('can kick items', function(done) {
-		var errors	=	[];
-		var finish	=	function()
+		var errors = [];
+		var finish = function()
 		{
 			expect(errors.length).toBe(0);
 			done();
@@ -260,8 +260,8 @@ describe('Hustle queue operations', function() {
 	});
 
 	it('can release items', function(done) {
-		var errors	=	[];
-		var finish	=	function()
+		var errors = [];
+		var finish = function()
 		{
 			expect(errors.length).toBe(0);
 			done();
@@ -292,8 +292,8 @@ describe('Hustle queue operations', function() {
 	});
 
 	it('can delete items', function(done) {
-		var errors	=	[];
-		var finish	=	function()
+		var errors = [];
+		var finish = function()
 		{
 			expect(errors.length).toBe(0);
 			done();
@@ -321,9 +321,9 @@ describe('Hustle queue operations', function() {
 	});
 
 	it('gets a null item when deleting items that don\'t exist', function(done) {
-		var item	=	{hai: 'lol'};
-		var error	=	false;
-		var finish	=	function()
+		var item = {hai: 'lol'};
+		var error = false;
+		var finish = function()
 		{
 			expect(item).toBe(null);
 			expect(error).toBe(false);
@@ -331,11 +331,11 @@ describe('Hustle queue operations', function() {
 		};
 		hustle.Queue.delete(6980085, {
 			success: function(ditem) {
-				item	=	ditem;
+				item = ditem;
 				finish();
 			},
 			error: function(e) {
-				error	=	e;
+				error = e;
 				console.error('err: ', e);
 				finish();
 			}
@@ -343,12 +343,12 @@ describe('Hustle queue operations', function() {
 	});
 
 	it('can consume a tube', function(done) {
-		var num_consumed	=	0;
-		var num_items		=	3;
-		var errors			=	[];
-		var consumer		=	null;
-		var ids				=	new Array(num_items);
-		var finish	=	function()
+		var num_consumed = 0;
+		var num_items = 3;
+		var errors = [];
+		var consumer = null;
+		var ids = new Array(num_items);
+		var finish = function()
 		{
 			num_consumed++;
 			if(num_consumed < num_items) return;
@@ -359,14 +359,14 @@ describe('Hustle queue operations', function() {
 			done();
 		};
 
-		var error	=	function(e)
+		var error = function(e)
 		{
 			errors.push(e);
 			console.error('err: ', e);
 			finish();
 		};
 
-		var dispatch	=	function(item)
+		var dispatch = function(item)
 		{
 			expect(ids.indexOf(item.id) >= 0).toBe(true);
 			hustle.Queue.delete(item.id, {
@@ -374,21 +374,21 @@ describe('Hustle queue operations', function() {
 				error: error
 			});
 		};
-		consumer	=	new hustle.Queue.Consumer(dispatch, {
+		consumer = new hustle.Queue.Consumer(dispatch, {
 			tube: 'incoming'
 		});
 
 		for(var i = 0; i < num_items; i++)
 		{
-			var id		=	Math.round(Math.random() * 1000);
-			var item	=	{id: id, test: 'YOLOOOO'};
+			var id = Math.round(Math.random() * 1000);
+			var item = {id: id, test: 'YOLOOOO'};
 			ids.push(id);
 			(function(idx) {
 				hustle.Queue.put(item, {
 					tube: 'incoming',
 					priority: idx,
 					success: function(item) {
-						ids[idx]	=	item.id;
+						ids[idx] = item.id;
 					},
 					error: error
 				});
@@ -397,7 +397,7 @@ describe('Hustle queue operations', function() {
 	});
 
 	it('can close a database', function(done) {
-		var res	=	hustle.close();
+		var res = hustle.close();
 		expect(res).toBe(true);
 		expect(hustle.is_open()).toBe(false);
 		done();
@@ -405,19 +405,19 @@ describe('Hustle queue operations', function() {
 });
 
 describe('Hustle queue delayed/ttr operations', function() {
-	var hustle	=	new Hustle({
+	var hustle = new Hustle({
 		tubes: ['incoming', 'outgoing'],
 	});
 
 	it('can clear a database', function(done) {
-		var res	=	hustle.wipe();
+		var res = hustle.wipe();
 		expect(res).toBe(true);
 		done();
 	});
 
 	it('can open a database', function(done) {
-		var db	=	null;
-		var finished	=	function()
+		var db = null;
+		var finished = function()
 		{
 			expect(db instanceof IDBDatabase).toBe(true);
 			expect(hustle.is_open()).toBe(true);
@@ -425,7 +425,7 @@ describe('Hustle queue delayed/ttr operations', function() {
 		};
 		hustle.open({
 			success: function(e) {
-				db	=	e.target.result;
+				db = e.target.result;
 				finished();
 			},
 			error: function(e) {
@@ -436,12 +436,12 @@ describe('Hustle queue delayed/ttr operations', function() {
 	});
 
 	it('will delay making a queue item ready', function(done) {
-		var item1	=	null;
-		var item2	=	null;
-		var count	=	0;
-		var msg		=	'yes, delayed';
-		var errors	=	[];
-		var finish	=	function()
+		var item1 = null;
+		var item2 = null;
+		var count = 0;
+		var msg = 'yes, delayed';
+		var errors = [];
+		var finish = function()
 		{
 			count++;
 			if(count < 2) return false;
@@ -452,14 +452,14 @@ describe('Hustle queue delayed/ttr operations', function() {
 			done();
 		};
 
-		var error	=	function(e)
+		var error = function(e)
 		{
 			errors.push(e);
 			console.error('err: ', e);
 			finish();
 		};
 
-		var do_reserve	=	function(is_first)
+		var do_reserve = function(is_first)
 		{
 			hustle.Queue.reserve({
 				success: function(item) {
@@ -482,10 +482,10 @@ describe('Hustle queue delayed/ttr operations', function() {
 	});
 
 	it('will move an expired job back to the ready state', function(done) {
-		var errors	=	[];
-		var item_id	=	null;
-		var state	=	null;
-		var finish	=	function()
+		var errors = [];
+		var item_id = null;
+		var state = null;
+		var finish = function()
 		{
 			expect(errors.length).toBe(0);
 			expect(item_id).not.toBe(null);
@@ -493,18 +493,18 @@ describe('Hustle queue delayed/ttr operations', function() {
 			done();
 		};
 
-		var error	=	function(e)
+		var error = function(e)
 		{
 			errors.push(e);
 			console.error('err: ', e);
 			finish();
 		};
 
-		var do_peek	=	function()
+		var do_peek = function()
 		{
 			hustle.Queue.peek(item_id, {
 				success: function(item) {
-					state	=	item.state;
+					state = item.state;
 					finish();
 					hustle.Queue.delete(item_id);
 				},
@@ -515,7 +515,7 @@ describe('Hustle queue delayed/ttr operations', function() {
 		hustle.Queue.put({test: true}, {
 			ttr: 1,
 			success: function(item) {
-				item_id	=	item.id;
+				item_id = item.id;
 				hustle.Queue.reserve({
 					success: function() {
 						setTimeout( do_peek, 2000 );
@@ -528,10 +528,10 @@ describe('Hustle queue delayed/ttr operations', function() {
 	});
 
 	it('will reset ttr for touched items', function(done) {
-		var errors	=	[];
-		var item_id	=	null;
-		var state	=	null;
-		var finish	=	function()
+		var errors = [];
+		var item_id = null;
+		var state = null;
+		var finish = function()
 		{
 			expect(errors.length).toBe(0);
 			expect(item_id).not.toBe(null);
@@ -539,25 +539,25 @@ describe('Hustle queue delayed/ttr operations', function() {
 			done();
 		};
 
-		var error	=	function(e)
+		var error = function(e)
 		{
 			errors.push(e);
 			console.error('err: ', e);
 			finish();
 		};
 
-		var do_peek	=	function()
+		var do_peek = function()
 		{
 			hustle.Queue.peek(item_id, {
 				success: function(item) {
-					state	=	item.state;
+					state = item.state;
 					finish();
 				},
 				error: error
 			});
 		};
 
-		var do_touch	=	function()
+		var do_touch = function()
 		{
 			hustle.Queue.touch(item_id, {
 				error: error
@@ -567,7 +567,7 @@ describe('Hustle queue delayed/ttr operations', function() {
 		hustle.Queue.put({test: true}, {
 			ttr: 2,
 			success: function(item) {
-				item_id	=	item.id;
+				item_id = item.id;
 				hustle.Queue.reserve({
 					success: function() {
 						setTimeout( do_touch, 1500 );
@@ -581,7 +581,7 @@ describe('Hustle queue delayed/ttr operations', function() {
 	});
 
 	it('can close a database', function(done) {
-		var res	=	hustle.close();
+		var res = hustle.close();
 		expect(res).toBe(true);
 		expect(hustle.is_open()).toBe(false);
 		done();
@@ -589,26 +589,26 @@ describe('Hustle queue delayed/ttr operations', function() {
 });
 
 describe('Hustle promise API (subset)', function() {
-	var hustle	=	new Hustle({
+	var hustle = new Hustle({
 		tubes: ['incoming', 'outgoing'],
 	}).promisify();
 
 	it('can clear a database', function(done) {
-		var res	=	hustle.wipe();
+		var res = hustle.wipe();
 		expect(res).toBe(true);
 		done();
 	});
 
 	it('can open a database', function(done) {
-		var db	=	null;
-		var finished	=	function()
+		var db = null;
+		var finished = function()
 		{
 			expect(db instanceof IDBDatabase).toBe(true);
 			expect(hustle.is_open()).toBe(true);
 			done();
 		};
 		hustle.open().then(function(e) {
-			db	=	e.target.result;
+			db = e.target.result;
 			finished();
 		}).catch(function(e) {
 			console.error('err: ', e);
@@ -617,12 +617,12 @@ describe('Hustle promise API (subset)', function() {
 	});
 
 	it('can add queue items', function(done) {
-		var errors			=	[];
-		var items			=	[];
-		var num_messages	=	2;
-		var num_finished	=	0;
+		var errors = [];
+		var items = [];
+		var num_messages = 2;
+		var num_finished = 0;
 
-		var finish	=	function()
+		var finish = function()
 		{
 			num_finished++;
 			if(num_finished < num_messages) return;
@@ -631,12 +631,12 @@ describe('Hustle promise API (subset)', function() {
 			done();
 		};
 
-		var success	=	function(item)
+		var success = function(item)
 		{
 			items.push(item.data);
 			finish();
 		};
-		var error	=	function(e)
+		var error = function(e)
 		{
 			errors.push(e);
 			console.error('err: ', e);
@@ -647,30 +647,30 @@ describe('Hustle promise API (subset)', function() {
 	});
 
 	it('can count ready items in a tube', function(done) {
-		var error	=	null;
-		var number	=	0;
-		var finish	=	function()
+		var error = null;
+		var number = 0;
+		var finish = function()
 		{
 			expect(number).toBe(2);
 			expect(error).toBe(null);
 			done();
 		};
 		hustle.Queue.count_ready('outgoing').then(function(num) {
-			number	=	num;
+			number = num;
 			finish();
 		}).catch(function(e) {
-			error	=	e;
+			error = e;
 			finish();
 		})
 	});
 
 	it('can reserve (and delete) queue items', function(done) {
-		var errors			=	[];
-		var items			=	[];
-		var num_messages	=	2;
-		var num_finished	=	0;
+		var errors = [];
+		var items = [];
+		var num_messages = 2;
+		var num_finished = 0;
 
-		var finish	=	function()
+		var finish = function()
 		{
 			num_finished++;
 			if(num_finished < num_messages) return;
@@ -679,18 +679,18 @@ describe('Hustle promise API (subset)', function() {
 			done();
 		};
 
-		var error	=	function(e)
+		var error = function(e)
 		{
 			errors.push(e);
 			console.error('err: ', e);
 			finish();
 		};
-		var dsuccess	=	function()
+		var dsuccess = function()
 		{
 			finish();
 		};
 
-		var success	=	function(item)
+		var success = function(item)
 		{
 			items.push(item.data);
 			hustle.Queue.delete(item.id).then(dsuccess).catch(error);
@@ -700,11 +700,11 @@ describe('Hustle promise API (subset)', function() {
 	});
 
 	it('can chain calls', function(done) {
-		var error	=	null;
-		var send	=	'could i speak to the drug dealer of the house please?';
-		var message	=	null;
+		var error = null;
+		var send = 'could i speak to the drug dealer of the house please?';
+		var message = null;
 
-		var finish	=	function()
+		var finish = function()
 		{
 			expect(message).toBe(send);
 			expect(error).toBe(null);
@@ -714,19 +714,19 @@ describe('Hustle promise API (subset)', function() {
 		hustle.Queue.put(send, {tube: 'outgoing'}).then(function(item) {
 			return hustle.Queue.reserve({tube: 'outgoing'});
 		}).then(function(item) {
-			message	=	item.data;
+			message = item.data;
 			return hustle.Queue.delete(item.id);
 		}).then(function() {
 			finish();
 		}).catch(function(e) {
-			error	=	e;
+			error = e;
 			console.error('err: ', e);
 			finish();
 		});
 	});
 
 	it('can close a database', function(done) {
-		var res	=	hustle.close();
+		var res = hustle.close();
 		expect(res).toBe(true);
 		expect(hustle.is_open()).toBe(false);
 		done();
@@ -734,28 +734,28 @@ describe('Hustle promise API (subset)', function() {
 });
 
 describe('Stress tests', function() {
-	jasmine.DEFAULT_TIMEOUT_INTERVAL	=	16000;
+	jasmine.DEFAULT_TIMEOUT_INTERVAL = 16000;
 
-	var hustle	=	new Hustle({
+	var hustle = new Hustle({
 		tubes: ['jobs'],
 	}).promisify();
 
 	it('can clear a database', function(done) {
-		var res	=	hustle.wipe();
+		var res = hustle.wipe();
 		expect(res).toBe(true);
 		done();
 	});
 
 	it('can open a database', function(done) {
-		var db	=	null;
-		var finished	=	function()
+		var db = null;
+		var finished = function()
 		{
 			expect(db instanceof IDBDatabase).toBe(true);
 			expect(hustle.is_open()).toBe(true);
 			done();
 		};
 		hustle.open().then(function(e) {
-			db	=	e.target.result;
+			db = e.target.result;
 			finished();
 		}).catch(function(e) {
 			console.error('err: ', e);
@@ -765,11 +765,11 @@ describe('Stress tests', function() {
 
 	it('can withstand a good pounding (queue)', function(done) {
 		var con1, con2, con3;
-		var errors		=	[];
-		var num_items	=	50;
-		var got_items	=	0;
+		var errors = [];
+		var num_items = 50;
+		var got_items = 0;
 
-		var finish	=	function()
+		var finish = function()
 		{
 			got_items++;
 			if(got_items < num_items) return;
@@ -781,23 +781,23 @@ describe('Stress tests', function() {
 			done();
 		};
 
-		var dispatch	=	function(job)
+		var dispatch = function(job)
 		{
 			finish();
 		};
 
-		var errorfn	=	function(e)
+		var errorfn = function(e)
 		{
 			console.error('err: ', e);
 			errors.push(e);
 			finish();
 		};
 
-		con1	=	new hustle.Queue.Consumer(dispatch, {tube: 'jobs', error: errorfn});
-		con2	=	new hustle.Queue.Consumer(dispatch, {tube: 'jobs', error: errorfn});
-		con3	=	new hustle.Queue.Consumer(dispatch, {tube: 'jobs', error: errorfn});
+		con1 = new hustle.Queue.Consumer(dispatch, {tube: 'jobs', error: errorfn});
+		con2 = new hustle.Queue.Consumer(dispatch, {tube: 'jobs', error: errorfn});
+		con3 = new hustle.Queue.Consumer(dispatch, {tube: 'jobs', error: errorfn});
 
-		var job	=	{type: 'dismantle NSA'};
+		var job = {type: 'dismantle NSA'};
 		for(var i = 0; i < num_items; i++)
 		{
 			hustle.Queue.put(job, {tube: 'jobs'}).catch(errorfn);
@@ -805,7 +805,7 @@ describe('Stress tests', function() {
 	});
 
 	it('can close a database', function(done) {
-		var res	=	hustle.close();
+		var res = hustle.close();
 		expect(res).toBe(true);
 		expect(hustle.is_open()).toBe(false);
 		done();
