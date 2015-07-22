@@ -784,21 +784,17 @@
 
 			var tube = coptions.tube ? coptions.tube : 'default';
 			var delay = coptions.delay ? coptions.delay : 100;
-			var do_stop = false;
+			var interval = null;
 
 			var poll = function(options)
 			{
 				options || (options = {});
 
-				if(do_stop || !db) return;
+				if(!interval || !db) return;
 				if(coptions.enable_fn)
 				{
 					var res = coptions.enable_fn();
-					if(!res)
-					{
-						do_stop = true;
-						return false;
-					}
+					if(!res) return false;
 				}
 
 				// grab an item from the tube
@@ -807,31 +803,29 @@
 					success: function(item) {
 						if(!item) return;
 						fn(item);
-						// immediately poll for new items
-						setTimeout( function() { poll({skip_recurse: true}); }, 0 );
-					}
+						// immediately poll again for new items
+						setTimeout(poll);
+					}.bind(this)
 				});
-
-				// poll again
-				if(!options.skip_recurse) setTimeout(poll, delay);
 			};
 
+			var interval = null;
 			var start = function()
 			{
-				if(!do_stop) return false;
-				do_stop = false;
-				setTimeout(poll, delay);
+				if(interval) return false;
+				interval = setInterval(poll, delay);
 				return true;
 			};
 
 			var stop = function()
 			{
-				if(do_stop) return false;
-				do_stop = true;
+				if(!interval) return false;
+				clearInterval(interval);
+				interval = null;
 				return true;
 			};
 
-			setTimeout(poll, delay);
+			start();
 
 			this.start = start;
 			this.stop = stop;
